@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: uv run --locked pytest
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build
+        run: docker build -t archivist:ci .
+      - name: Extract a sample ZIP as the non-root user
+        run: |
+          mkdir photos
+          python3 - <<'EOF'
+          import zipfile
+          with zipfile.ZipFile("photos/album.zip", "w") as archive:
+              archive.writestr("a.jpg", "x")
+          EOF
+          chmod -R 777 photos
+          docker run --rm -v "$PWD/photos:/data" archivist:ci
+          test -f photos/album/a.jpg
+          test ! -e photos/album.zip

@@ -1,0 +1,12 @@
+.git
+.venv
+**/__pycache__
+**/*.pyc
+**/*.new
+**/*.tmp
+dist
+build
+*.egg-info
+uv.lock
+Dockerfile
+.dockerignore

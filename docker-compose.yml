@@ -1,0 +1,10 @@
+services:
+  archivist:
+    build: .
+    image: archivist:latest
+    restart: "no"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ${HOST_PARENT_FOLDER:-./photos}:/data

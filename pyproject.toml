@@ -1,0 +1,32 @@
+[project]
+name = "archivist"
+version = "0.1.0"
+description = "Recursively extract ZIP archives and clean macOS, Windows and Synology metadata."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "send2trash>=1.8",
+]
+
+[project.urls]
+Homepage = "https://github.com/CoffeesoftDotDev/archivist"
+Repository = "https://github.com/CoffeesoftDotDev/archivist"
+Issues = "https://github.com/CoffeesoftDotDev/archivist/issues"
+
+[project.scripts]
+archivist = "archivist.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/archivist"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

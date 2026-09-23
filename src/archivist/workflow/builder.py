@@ -1,0 +1,42 @@
+"""Builds the workflow from the config (Builder pattern)."""
+from ..core import Config
+from ..services import MetadataCleaner, ZipExtractor
+from ..utils import make_remover
+from .runner import Workflow
+from .steps import (
+    ExtractArchives,
+    RemoveAppleDoubleFiles,
+    RemoveAppleDoubleFolders,
+    RemoveEaDirFolders,
+    RemoveFilesNamed,
+    Step,
+)
+
+
+class WorkflowBuilder:
+    """Creates the services, then goes through the step sequence and keeps the steps the config enables."""
+
+    def __init__(self, config: Config):
+        self.config = config
+
+    def build(self) -> Workflow:
+        config = self.config
+        remover = make_remover(
+            dry_run=config.dry_run,
+            to_trash=config.send_to_bin,
+            force_readonly=config.force_readonly,
+        )
+        extractor = ZipExtractor(remover, delete_archive=config.delete_zip, dry_run=config.dry_run)
+        cleaner = MetadataCleaner(remover)
+
+        # (enabled, step) in run order; file steps come first so emptied ._ folders go too
+        sequence: list[tuple[bool, Step]] = [
+            (True, ExtractArchives(extractor)),
+            (config.appledouble, RemoveAppleDoubleFiles(cleaner, config.appledouble_max_size)),
+            (config.ds_store, RemoveFilesNamed(cleaner, ".DS_Store")),
+            (config.thumbs_db, RemoveFilesNamed(cleaner, "Thumbs.db")),
+            (config.desktop_ini, RemoveFilesNamed(cleaner, "desktop.ini")),
+            (config.appledouble, RemoveAppleDoubleFolders(cleaner)),
+            (config.eadir, RemoveEaDirFolders(cleaner)),
+        ]
+        return Workflow([step for enabled, step in sequence if enabled], dry_run=config.dry_run)
