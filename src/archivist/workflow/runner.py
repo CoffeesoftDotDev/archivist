@@ -33,3 +33,6 @@ class Workflow:
         width = max(map(len, report), default=0)
         for label, count in report.items():
             log.info(f"{label:<{width}} : {count}")
+        if self.dry_run:
+            log.info("")
+            log.info("Run again with --apply to make these changes.")

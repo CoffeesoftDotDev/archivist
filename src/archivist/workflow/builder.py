@@ -23,12 +23,12 @@ class WorkflowBuilder:
     def build(self) -> Workflow:
         config = self.config
         remover = make_remover(
-            dry_run=config.dry_run,
+            dry_run=not config.apply,
             to_trash=config.send_to_bin,
             force_readonly=config.force_readonly,
         )
         extractor = ZipExtractor(
-            remover, delete_archive=not config.leave_zip, dry_run=config.dry_run, confirm_merge=self.confirm_merge
+            remover, delete_archive=not config.leave_zip, dry_run=not config.apply, confirm_merge=self.confirm_merge
         )
         cleaner = MetadataCleaner(remover)
 
@@ -42,4 +42,4 @@ class WorkflowBuilder:
             (not config.leave_appledouble, RemoveAppleDoubleFolders(cleaner)),
             (not config.leave_eadir, RemoveEaDirFolders(cleaner)),
         ]
-        return Workflow([step for enabled, step in sequence if enabled], dry_run=config.dry_run)
+        return Workflow([step for enabled, step in sequence if enabled], dry_run=not config.apply)

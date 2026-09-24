@@ -91,7 +91,7 @@ def photos(tmp_path, make_zip, write_file):
 
 
 def test_run_extracts_nested_zips_and_cleans_metadata(photos, listing):
-    assert run(Config(), photos) == {
+    assert run(Config(apply=True), photos) == {
         "ZIP files found": 2,
         "ZIP files extracted": 2,
         "ZIP files skipped (target exists)": 0,
@@ -106,9 +106,9 @@ def test_run_extracts_nested_zips_and_cleans_metadata(photos, listing):
     assert listing(photos) == ["album", "album/a.jpg", "album/inner", "album/inner/b.jpg"]
 
 
-def test_dry_run_changes_nothing(photos, listing, logs):
+def test_default_run_is_a_dry_run_that_changes_nothing(photos, listing, logs):
     before = listing(photos)
-    report = run(Config(dry_run=True), photos)
+    report = run(Config(), photos)
     assert listing(photos) == before
     # Nothing is removed, so files inside album.zip are not counted and ._empty still holds its Thumbs.db.
     assert report == {
@@ -124,10 +124,12 @@ def test_dry_run_changes_nothing(photos, listing, logs):
         "@eaDir folders removed": 1,
     }
     assert "Dry run completed: nothing was changed" in logs.text
+    assert "Run again with --apply to make these changes." in logs.text
 
 
 def test_disabled_steps_leave_files_alone_and_stay_out_of_the_report(photos, listing):
     config = Config(
+        apply=True,
         leave_zip=True,
         leave_appledouble=True,
         leave_eadir=True,

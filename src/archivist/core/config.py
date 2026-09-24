@@ -68,7 +68,7 @@ class Config:
     parent_folder: Path | None = None
     leave_zip: bool = False
     send_to_bin: bool = False
-    dry_run: bool = False
+    apply: bool = False  # off: only show what would change (dry run)
     # Three states, kept as one field with a hand-written converter and CLI pair (issue #3):
     # None = no file (--no-log-file), "" = <parent>/report.log (default, --log-file), otherwise a file or folder
     log_file: str | None = ""
@@ -94,7 +94,7 @@ class Config:
             parent_folder=_env_path(env, "PARENT_FOLDER", d.parent_folder),
             leave_zip=_env_bool(env, "LEAVE_ZIP", d.leave_zip),
             send_to_bin=_env_bool(env, "SEND_TO_BIN", d.send_to_bin),
-            dry_run=_env_bool(env, "DRY_RUN", d.dry_run),
+            apply=_env_bool(env, "APPLY", d.apply),
             log_file=_env_log_file(env, d.log_file),
         )
 
@@ -105,7 +105,7 @@ class Config:
             f"Delete ZIPs        : {on_off(not self.leave_zip)}",
             f"Read-only deletion : {on_off(self.force_readonly)}",
             f"Send to bin        : {on_off(self.send_to_bin)}",
-            f"Dry run            : {'ENABLED (nothing will be changed)' if self.dry_run else 'disabled'}",
+            f"Mode               : {'APPLY (files will be changed)' if self.apply else 'dry run (nothing will be changed, use --apply to make the changes)'}",
             f"Remove AppleDouble : {on_off(not self.leave_appledouble)} (._ files <= {self.appledouble_max_size} bytes, empty ._ folders)",
             f"Remove .DS_Store   : {on_off(not self.leave_ds_store)}",
             f"Remove Thumbs.db   : {on_off(not self.leave_thumbs_db)}",
