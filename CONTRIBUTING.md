@@ -62,6 +62,7 @@ src/archivist/
   cli/                     Command line
     parser.py              Options (defaults from ARCHIVIST_* variables) -> Config
     entrypoint.py          main(): folder prompt, logging outputs, exit codes
+    prompts.py             MergePrompt: asks whether to extract into an existing folder
   workflow/                The run as a sequence of steps
     steps.py               The steps (Command pattern)
     builder.py             WorkflowBuilder: keeps the steps the config enables (Builder pattern)
@@ -70,7 +71,7 @@ src/archivist/
     config.py              Config model (defaults, ARCHIVIST_* variables, summary)
     logger.py              Logging setup (console and report file)
   services/                Business logic, one class per job
-    zip_extractor.py       ZipExtractor (nested ZIPs, staging folder, space and ZIP-bomb checks)
+    zip_extractor.py       ZipExtractor (nested ZIPs, staging folder, space and ZIP-bomb checks, existing folders)
     metadata_cleaner.py    MetadataCleaner (._ files and folders, .DS_Store, Thumbs.db, desktop.ini, @eaDir)
   utils/                   Filesystem helpers and removal strategies, no business rules
     fs.py                  Hidden and read-only checks, any-case file search, sizes

@@ -5,8 +5,13 @@ from pathlib import Path
 from ..core import get_logger, resolve_log_path, setup_logging
 from ..workflow import WorkflowBuilder
 from .parser import parse_config
+from .prompts import MergePrompt
 
 log = get_logger()
+
+
+def is_interactive() -> bool:
+    return bool(sys.stdin) and sys.stdin.isatty()
 
 
 def resolve_root(parent_folder: Path | None) -> Path | None:
@@ -14,7 +19,7 @@ def resolve_root(parent_folder: Path | None) -> Path | None:
     if parent_folder is not None:
         root = parent_folder
     else:
-        if not sys.stdin or not sys.stdin.isatty():
+        if not is_interactive():
             log.error("No parent folder given. Use --parent-folder or ARCHIVIST_PARENT_FOLDER.")
             return None
         root_path = input("Parent folder path: ").strip().strip('"')
@@ -64,5 +69,7 @@ def _run(argv: list[str] | None) -> int:
     if log_path:
         log.info(f"Report file        : {log_path}")
 
-    WorkflowBuilder(config).build().run(root)
+    # Nothing is merged in a dry run, so there is nothing to ask.
+    confirm_merge = MergePrompt() if is_interactive() and not config.dry_run else None
+    WorkflowBuilder(config, confirm_merge=confirm_merge).build().run(root)
     return 0

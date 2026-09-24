@@ -19,6 +19,17 @@ def is_readonly(path: Path) -> bool:
     return not os.access(path, os.W_OK)
 
 
+def is_link(path: Path) -> bool:
+    """Symlink, or on Windows any reparse point such as a directory junction (is_symlink() misses those)."""
+    if path.is_symlink():
+        return True
+    try:
+        attrs = getattr(os.lstat(path), "st_file_attributes", 0)
+    except OSError:
+        return False
+    return bool(attrs & stat.FILE_ATTRIBUTE_REPARSE_POINT)
+
+
 def make_writable(path: Path) -> None:
     """Clear the read-only flag."""
     os.chmod(path, stat.S_IWRITE | stat.S_IREAD)

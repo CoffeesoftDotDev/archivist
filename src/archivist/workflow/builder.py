@@ -1,6 +1,6 @@
 """Builds the workflow from the config (Builder pattern)."""
 from ..core import Config
-from ..services import MetadataCleaner, ZipExtractor
+from ..services import ConfirmMerge, MetadataCleaner, ZipExtractor
 from ..utils import make_remover
 from .runner import Workflow
 from .steps import (
@@ -16,8 +16,9 @@ from .steps import (
 class WorkflowBuilder:
     """Creates the services, then goes through the step sequence and keeps the steps the config enables."""
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, confirm_merge: ConfirmMerge | None = None):
         self.config = config
+        self.confirm_merge = confirm_merge  # asked per archive whose folder exists; None never merges
 
     def build(self) -> Workflow:
         config = self.config
@@ -26,7 +27,9 @@ class WorkflowBuilder:
             to_trash=config.send_to_bin,
             force_readonly=config.force_readonly,
         )
-        extractor = ZipExtractor(remover, delete_archive=config.delete_zip, dry_run=config.dry_run)
+        extractor = ZipExtractor(
+            remover, delete_archive=config.delete_zip, dry_run=config.dry_run, confirm_merge=self.confirm_merge
+        )
         cleaner = MetadataCleaner(remover)
 
         # (enabled, step) in run order; file steps come first so emptied ._ folders go too
