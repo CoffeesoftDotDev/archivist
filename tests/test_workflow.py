@@ -27,13 +27,22 @@ def step_names(config: Config) -> list[str]:
     ("config", "expected"),
     [
         (Config(), EVERY_STEP),
-        (Config(appledouble=False), ["ExtractArchives", ".DS_Store", "Thumbs.db", "desktop.ini", "RemoveEaDirFolders"]),
         (
-            Config(eadir=False, thumbs_db=False),
+            Config(leave_appledouble=True),
+            ["ExtractArchives", ".DS_Store", "Thumbs.db", "desktop.ini", "RemoveEaDirFolders"],
+        ),
+        (
+            Config(leave_eadir=True, leave_thumbs_db=True),
             ["ExtractArchives", "RemoveAppleDoubleFiles", ".DS_Store", "desktop.ini", "RemoveAppleDoubleFolders"],
         ),
         (
-            Config(appledouble=False, eadir=False, ds_store=False, thumbs_db=False, desktop_ini=False),
+            Config(
+                leave_appledouble=True,
+                leave_eadir=True,
+                leave_ds_store=True,
+                leave_thumbs_db=True,
+                leave_desktop_ini=True,
+            ),
             ["ExtractArchives"],
         ),
     ],
@@ -119,7 +128,12 @@ def test_dry_run_changes_nothing(photos, listing, logs):
 
 def test_disabled_steps_leave_files_alone_and_stay_out_of_the_report(photos, listing):
     config = Config(
-        delete_zip=False, appledouble=False, eadir=False, ds_store=False, thumbs_db=False, desktop_ini=False
+        leave_zip=True,
+        leave_appledouble=True,
+        leave_eadir=True,
+        leave_ds_store=True,
+        leave_thumbs_db=True,
+        leave_desktop_ini=True,
     )
     report = run(config, photos)
     assert report == {

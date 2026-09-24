@@ -89,7 +89,10 @@ Each option exists in three places, which must stay in sync:
 2. A flag in [parser.py](src/archivist/cli/parser.py), using the `Config` value as its default
 3. A row in the options and environment variable tables of [README.md](README.md), and a line in [.env.example](.env.example)
 
-The migration to typed-settings in [#1](https://github.com/CoffeesoftDotDev/archivist/issues/1) will reduce the first two to a single declaration.
+The migration to typed-settings in [#1](https://github.com/CoffeesoftDotDev/archivist/issues/1) will reduce the first two to a single declaration. Two rules keep options ready for it:
+
+* Name each field after its flag and variable, and give it the flag's default. A `--leave-x` flag sets `leave_x`, which defaults to `False`; code that needs the positive meaning uses `not config.leave_x`.
+* An option that can't be one plain field and one flag stays hand-written. The only one today is the log file (`--log-file [PATH]` / `--no-log-file`), declared in `add_log_file_options()` and converted by `parse_log_file()` for `ARCHIVIST_LOG_FILE`.
 
 ## Adding a step
 
