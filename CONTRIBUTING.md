@@ -83,16 +83,33 @@ Each layer only imports from the layers below it: `cli` -> `workflow` -> `servic
 
 ## Adding an option
 
-Each option exists in three places, which must stay in sync:
+Declare the option once, as a field on `Config` in [config.py](src/archivist/core/config.py), with its flags, its variable (without the `ARCHIVIST_` prefix) and its help text:
 
-1. A field on `Config` in [config.py](src/archivist/core/config.py), with its `ARCHIVIST_*` variable read in `Config.from_env` and a line in `Config.summary`
-2. A flag in [parser.py](src/archivist/cli/parser.py), using the `Config` value as its default
-3. A row in the options and environment variable tables of [README.md](README.md), and a line in [.env.example](.env.example)
+```python
+leave_zip: bool = option(
+    False, "--leave-zip", env="LEAVE_ZIP",
+    help="Keep ZIP archives after extraction (default: they are deleted).",
+)
+```
 
-The migration to typed-settings in [#1](https://github.com/CoffeesoftDotDev/archivist/issues/1) will reduce the first two to a single declaration. Two rules keep options ready for it:
+`Config.from_env` reads the variable and [parser.py](src/archivist/cli/parser.py) builds the flag from this declaration, both chosen by the field type:
+
+| Type           | Flag                                             | Variable                                        |
+|----------------|--------------------------------------------------|-------------------------------------------------|
+| `bool`         | Plain flag, sets `True`                          | `true`/`false`, `1`/`0`, `yes`/`no`, `on`/`off` |
+| `int`          | Takes a number                                   | A whole number                                  |
+| `Path \| None` | Takes a path; an empty value counts as not given | A path                                          |
+
+Fields are declared in `--help` order, and an empty or unset variable always keeps the default. Then:
+
+1. Add a line to `Config.summary` if the option should appear at the start of the report
+2. Add a row to the options and environment variable tables of [README.md](README.md), and a line to [.env.example](.env.example)
+3. Update `HELP` in [test_options.py](tests/test_options.py), which pins the full `--help` text
+
+Two rules keep options consistent:
 
 * Name each field after its flag and variable, and give it the flag's default. A `--leave-x` flag sets `leave_x`, which defaults to `False`; code that needs the positive meaning uses `not config.leave_x`.
-* An option that can't be one plain field and one flag stays hand-written. The only one today is the log file (`--log-file [PATH]` / `--no-log-file`), declared in `add_log_file_options()` and converted by `parse_log_file()` for `ARCHIVIST_LOG_FILE`.
+* An option that doesn't fit one of the types above is declared without flags and gets hand-written ones in `build_parser`, plus a `parse=` converter if its variable needs one. There are two today: `--apply`, which shares a group with the hidden `--dry-run`, and the log file (`--log-file [PATH]` / `--no-log-file`), declared in `add_log_file_options()` and converted by `parse_log_file()`.
 
 ## Adding a step
 

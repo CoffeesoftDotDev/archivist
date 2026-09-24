@@ -1,13 +1,14 @@
-"""Command-line flags: one per Config field, with the ARCHIVIST_* variables as defaults."""
+"""Command-line flags: generated from the Config declarations, plus the hand-written ones."""
 import argparse
 import os
 import sys
 from collections.abc import Mapping
 from dataclasses import fields
 from pathlib import Path
+from typing import Any
 
 from ..core import Config
-from ..core.config import ENV_PREFIX
+from ..core.config import ENV_PREFIX, Option
 
 # Default for flags in a mutually exclusive group. Python 3.10's argparse (still in CI) only spots a clash
 # when a flag's value differs from its default ("is not"), so a bare --log-file ("") next to a "" default
@@ -16,86 +17,14 @@ NOT_GIVEN = object()
 
 
 def build_parser(defaults: Config) -> argparse.ArgumentParser:
-    """One flag per Config field; `defaults` already include the ARCHIVIST_* variables."""
+    """Flags generated from the Config declarations, then the hand-written ones; `defaults` include the variables."""
     parser = argparse.ArgumentParser(
         prog="archivist",
         description="Extract ZIPs recursively and clean macOS, Windows and Synology metadata.",
     )
-    parser.add_argument(
-        "--parent-folder",
-        dest="parent_folder",
-        # Empty means "not given" (as for ARCHIVIST_* variables), never the current folder
-        type=lambda value: Path(value) if value.strip() else defaults.parent_folder,
-        default=defaults.parent_folder,
-        help="Parent folder to process. If omitted or empty, you will be prompted.",
-    )
-    parser.add_argument(
-        "--leave-zip",
-        dest="leave_zip",
-        action="store_true",
-        default=defaults.leave_zip,
-        help="Keep ZIP archives after extraction (default: they are deleted).",
-    )
-    parser.add_argument(
-        "--leave-appledouble",
-        dest="leave_appledouble",
-        action="store_true",
-        default=defaults.leave_appledouble,
-        help="Do not remove macOS AppleDouble metadata "
-             "(small '._' files and '._' folders with no visible files).",
-    )
-    parser.add_argument(
-        "--leave-eadir",
-        dest="leave_eadir",
-        action="store_true",
-        default=defaults.leave_eadir,
-        help="Do not remove Synology '@eaDir' folders.",
-    )
-    parser.add_argument(
-        "--leave-ds-store",
-        dest="leave_ds_store",
-        action="store_true",
-        default=defaults.leave_ds_store,
-        help="Do not remove macOS '.DS_Store' files.",
-    )
-    parser.add_argument(
-        "--leave-thumbs-db",
-        dest="leave_thumbs_db",
-        action="store_true",
-        default=defaults.leave_thumbs_db,
-        help="Do not remove Windows 'Thumbs.db' thumbnail caches.",
-    )
-    parser.add_argument(
-        "--leave-desktop-ini",
-        dest="leave_desktop_ini",
-        action="store_true",
-        default=defaults.leave_desktop_ini,
-        help="Do not remove Windows 'desktop.ini' files (they hold custom folder icons and names).",
-    )
-    parser.add_argument(
-        "--max-size",
-        dest="appledouble_max_size",
-        type=int,
-        default=defaults.appledouble_max_size,
-        help="Max size in bytes for '._' files to be removed (default: %(default)s).",
-    )
-    parser.add_argument(
-        "--force-readonly-deletion",
-        "--force",
-        dest="force_readonly",
-        action="store_true",
-        default=defaults.force_readonly,
-        help="Clear the read-only flag and delete read-only files/folders "
-             "(default: read-only items are skipped).",
-    )
-    parser.add_argument(
-        "--send-to-bin",
-        dest="send_to_bin",
-        action="store_true",
-        default=defaults.send_to_bin,
-        help="Send removed items to the Recycle Bin / Trash instead of "
-             "deleting them permanently.",
-    )
+    for f, opt in Config.options():
+        if opt.flags:
+            add_generated_option(parser, f.name, f.type, opt, getattr(defaults, f.name))
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
         "--apply",
@@ -110,6 +39,22 @@ def build_parser(defaults: Config) -> argparse.ArgumentParser:
     mode.add_argument("--dry-run", dest="legacy_dry_run", action="store_true", help=argparse.SUPPRESS)
     add_log_file_options(parser)
     return parser
+
+
+def add_generated_option(parser: argparse.ArgumentParser, dest: str, kind: Any, opt: Option, default: Any) -> None:
+    """One flag from a Config declaration, shaped by the field type."""
+    if kind is bool:
+        parser.add_argument(*opt.flags, dest=dest, action="store_true", default=default, help=opt.help)
+    elif kind is int:
+        parser.add_argument(*opt.flags, dest=dest, type=int, default=default, help=opt.help)
+    elif kind == Path | None:
+        # Empty means "not given" (as for ARCHIVIST_* variables), never the current folder
+        parser.add_argument(
+            *opt.flags, dest=dest, default=default, help=opt.help,
+            type=lambda value: Path(value) if value.strip() else default,
+        )
+    else:
+        raise TypeError(f"No flag shape for {dest}: {kind}. Give it a hand-written flag instead.")
 
 
 def add_log_file_options(parser: argparse.ArgumentParser) -> None:
