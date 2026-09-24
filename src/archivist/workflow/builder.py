@@ -28,18 +28,18 @@ class WorkflowBuilder:
             force_readonly=config.force_readonly,
         )
         extractor = ZipExtractor(
-            remover, delete_archive=config.delete_zip, dry_run=config.dry_run, confirm_merge=self.confirm_merge
+            remover, delete_archive=not config.leave_zip, dry_run=config.dry_run, confirm_merge=self.confirm_merge
         )
         cleaner = MetadataCleaner(remover)
 
         # (enabled, step) in run order; file steps come first so emptied ._ folders go too
         sequence: list[tuple[bool, Step]] = [
             (True, ExtractArchives(extractor)),
-            (config.appledouble, RemoveAppleDoubleFiles(cleaner, config.appledouble_max_size)),
-            (config.ds_store, RemoveFilesNamed(cleaner, ".DS_Store")),
-            (config.thumbs_db, RemoveFilesNamed(cleaner, "Thumbs.db")),
-            (config.desktop_ini, RemoveFilesNamed(cleaner, "desktop.ini")),
-            (config.appledouble, RemoveAppleDoubleFolders(cleaner)),
-            (config.eadir, RemoveEaDirFolders(cleaner)),
+            (not config.leave_appledouble, RemoveAppleDoubleFiles(cleaner, config.appledouble_max_size)),
+            (not config.leave_ds_store, RemoveFilesNamed(cleaner, ".DS_Store")),
+            (not config.leave_thumbs_db, RemoveFilesNamed(cleaner, "Thumbs.db")),
+            (not config.leave_desktop_ini, RemoveFilesNamed(cleaner, "desktop.ini")),
+            (not config.leave_appledouble, RemoveAppleDoubleFolders(cleaner)),
+            (not config.leave_eadir, RemoveEaDirFolders(cleaner)),
         ]
         return Workflow([step for enabled, step in sequence if enabled], dry_run=config.dry_run)

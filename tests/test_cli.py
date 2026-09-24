@@ -13,8 +13,8 @@ def test_flag_beats_env_variable_which_beats_default():
     env = {"ARCHIVIST_MAX_SIZE": "4096", "ARCHIVIST_LEAVE_ZIP": "true"}
     config = cli.parse_config(["--max-size", "100"], environ=env)
     assert config.appledouble_max_size == 100
-    assert config.delete_zip is False
-    assert config.eadir is True
+    assert config.leave_zip is True
+    assert config.leave_eadir is False
 
 
 def test_every_flag_maps_to_a_config_field():
@@ -26,12 +26,12 @@ def test_every_flag_maps_to_a_config_field():
     ]
     assert cli.parse_config(argv, environ={}) == Config(
         parent_folder=Path("photos"),
-        delete_zip=False,
-        appledouble=False,
-        eadir=False,
-        ds_store=False,
-        thumbs_db=False,
-        desktop_ini=False,
+        leave_zip=True,
+        leave_appledouble=True,
+        leave_eadir=True,
+        leave_ds_store=True,
+        leave_thumbs_db=True,
+        leave_desktop_ini=True,
         appledouble_max_size=10,
         force_readonly=True,
         send_to_bin=True,
@@ -84,6 +84,56 @@ def test_report_goes_to_the_console_and_the_report_file_by_default(tmp_path, mak
 def test_no_log_file_writes_no_report_file(tmp_path):
     assert cli.main(["--parent-folder", str(tmp_path), "--no-log-file"]) == 0
     assert not (tmp_path / "report.log").exists()
+
+
+# Where the report ends up, for each state of the log file option, set by flag or by variable (#3).
+LOG_FILE_CASES = {
+    "default": ([], None, "root/report.log"),
+    "--log-file without a path": (["--log-file"], "true", "root/report.log"),
+    "custom file": (["--log-file", "{tmp}/logs/run.log"], "{tmp}/logs/run.log", "logs/run.log"),
+    "existing folder": (["--log-file", "{tmp}/existing"], "{tmp}/existing", "existing/report.log"),
+    "folder by trailing separator": (["--log-file", "{tmp}/new/"], "{tmp}/new/", "new/report.log"),
+    "turned off": (["--no-log-file"], "false", None),
+}
+
+
+@pytest.mark.parametrize("source", ["flag", "variable"])
+@pytest.mark.parametrize("case", LOG_FILE_CASES)
+def test_report_file_location(tmp_path, monkeypatch, case, source):
+    flags, variable, expected = LOG_FILE_CASES[case]
+    root = tmp_path / "root"
+    root.mkdir()
+    (tmp_path / "existing").mkdir()
+    fill = lambda value: value.replace("{tmp}", str(tmp_path))
+    argv = ["--parent-folder", str(root)]
+    if source == "flag":
+        argv += [fill(flag) for flag in flags]
+    elif variable is not None:
+        monkeypatch.setenv("ARCHIVIST_LOG_FILE", fill(variable))
+
+    assert cli.main(argv) == 0
+
+    written = sorted(p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*.log"))
+    assert written == ([expected] if expected else [])
+    if expected:
+        assert "Operation completed" in (tmp_path / expected).read_text(encoding="utf-8")
+
+
+def test_flag_beats_the_log_file_variable_in_both_directions(tmp_path, monkeypatch):
+    monkeypatch.setenv("ARCHIVIST_LOG_FILE", "false")
+    assert cli.main(["--parent-folder", str(tmp_path), "--log-file"]) == 0
+    assert (tmp_path / "report.log").is_file()
+
+    monkeypatch.setenv("ARCHIVIST_LOG_FILE", str(tmp_path / "elsewhere.log"))
+    assert cli.main(["--parent-folder", str(tmp_path), "--no-log-file"]) == 0
+    assert not (tmp_path / "elsewhere.log").exists()
+
+
+def test_log_file_and_no_log_file_cannot_be_combined(capsys):
+    with pytest.raises(SystemExit) as exit_info:
+        cli.parse_config(["--log-file", "--no-log-file"], environ={})
+    assert exit_info.value.code == 2
+    assert "not allowed with argument" in capsys.readouterr().err
 
 
 @pytest.fixture

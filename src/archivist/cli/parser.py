@@ -23,45 +23,45 @@ def build_parser(defaults: Config) -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--leave-zip",
-        dest="delete_zip",
-        action="store_false",
-        default=defaults.delete_zip,
+        dest="leave_zip",
+        action="store_true",
+        default=defaults.leave_zip,
         help="Keep ZIP archives after extraction (default: they are deleted).",
     )
     parser.add_argument(
         "--leave-appledouble",
-        dest="appledouble",
-        action="store_false",
-        default=defaults.appledouble,
+        dest="leave_appledouble",
+        action="store_true",
+        default=defaults.leave_appledouble,
         help="Do not remove macOS AppleDouble metadata "
              "(small '._' files and '._' folders with no visible files).",
     )
     parser.add_argument(
         "--leave-eadir",
-        dest="eadir",
-        action="store_false",
-        default=defaults.eadir,
+        dest="leave_eadir",
+        action="store_true",
+        default=defaults.leave_eadir,
         help="Do not remove Synology '@eaDir' folders.",
     )
     parser.add_argument(
         "--leave-ds-store",
-        dest="ds_store",
-        action="store_false",
-        default=defaults.ds_store,
+        dest="leave_ds_store",
+        action="store_true",
+        default=defaults.leave_ds_store,
         help="Do not remove macOS '.DS_Store' files.",
     )
     parser.add_argument(
         "--leave-thumbs-db",
-        dest="thumbs_db",
-        action="store_false",
-        default=defaults.thumbs_db,
+        dest="leave_thumbs_db",
+        action="store_true",
+        default=defaults.leave_thumbs_db,
         help="Do not remove Windows 'Thumbs.db' thumbnail caches.",
     )
     parser.add_argument(
         "--leave-desktop-ini",
-        dest="desktop_ini",
-        action="store_false",
-        default=defaults.desktop_ini,
+        dest="leave_desktop_ini",
+        action="store_true",
+        default=defaults.leave_desktop_ini,
         help="Do not remove Windows 'desktop.ini' files (they hold custom folder icons and names).",
     )
     parser.add_argument(
@@ -95,27 +95,36 @@ def build_parser(defaults: Config) -> argparse.ArgumentParser:
         default=defaults.dry_run,
         help="Show what would be extracted and removed without changing anything.",
     )
-    log_group = parser.add_mutually_exclusive_group()
-    log_group.add_argument(
+    add_log_file_options(parser, defaults.log_file)
+    return parser
+
+
+def add_log_file_options(parser: argparse.ArgumentParser, default: str | None) -> None:
+    """
+    --log-file [PATH] and --no-log-file, the one option with three states (see Config.log_file).
+    Kept hand-written on purpose: a flag with an optional value, plus a second flag writing the same
+    field, can't be generated from a settings class, so this function is added to the generated parser.
+    """
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         "--log-file",
         dest="log_file",
         nargs="?",
         const="",
-        default=defaults.log_file,
+        default=default,
         metavar="PATH",
         help="Write the report to PATH (a file, or a folder that will contain "
              "report.log). Default: <parent-folder>/report.log. "
              "The console always shows the report.",
     )
-    log_group.add_argument(
+    group.add_argument(
         "--no-log-file",
         dest="log_file",
         action="store_const",
         const=None,
-        default=defaults.log_file,
+        default=default,
         help="Do not write the report to a file (console only).",
     )
-    return parser
 
 
 def parse_config(argv: list[str] | None = None, environ: Mapping[str, str] | None = None) -> Config:

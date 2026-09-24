@@ -37,34 +37,40 @@ def _env_path(env: Mapping[str, str], name: str, default: Path | None) -> Path |
     return default if raw is None or raw.strip() == "" else Path(raw)
 
 
-def _env_log_file(env: Mapping[str, str], default: str | None) -> str | None:
-    """unset/empty -> default, false -> None (no file), true -> "" (<parent>/report.log), else a path."""
-    raw = env.get(ENV_PREFIX + "LOG_FILE")
-    if raw is None or raw.strip() == "":
-        return default
+def parse_log_file(raw: str) -> str | None:
+    """
+    The ARCHIVIST_LOG_FILE converter: false/no/off/0 -> None (no file),
+    empty or true/yes/on/1 -> "" (<parent>/report.log), anything else -> that path.
+    """
     value = raw.strip()
+    if not value or value.lower() in _TRUE:
+        return ""
     if value.lower() in _FALSE:
         return None
-    if value.lower() in _TRUE:
-        return ""
     return value
+
+
+def _env_log_file(env: Mapping[str, str], default: str | None) -> str | None:
+    raw = env.get(ENV_PREFIX + "LOG_FILE")
+    return default if raw is None or raw.strip() == "" else parse_log_file(raw)
 
 
 @dataclass(frozen=True)
 class Config:
-    """Runtime options for the extractor/cleaner."""
+    """Runtime options for the extractor/cleaner. Every bool defaults to False, like its flag."""
     force_readonly: bool = False
-    appledouble: bool = True
-    eadir: bool = True
-    ds_store: bool = True
-    thumbs_db: bool = True
-    desktop_ini: bool = True
+    leave_appledouble: bool = False
+    leave_eadir: bool = False
+    leave_ds_store: bool = False
+    leave_thumbs_db: bool = False
+    leave_desktop_ini: bool = False
     appledouble_max_size: int = APPLEDOUBLE_MAX_SIZE
     parent_folder: Path | None = None
-    delete_zip: bool = True
+    leave_zip: bool = False
     send_to_bin: bool = False
     dry_run: bool = False
-    # None = no file logging, "" = default <parent>/report.log, otherwise a custom path
+    # Three states, kept as one field with a hand-written converter and CLI pair (issue #3):
+    # None = no file (--no-log-file), "" = <parent>/report.log (default, --log-file), otherwise a file or folder
     log_file: str | None = ""
 
     def log_file_label(self) -> str:
@@ -79,14 +85,14 @@ class Config:
         d = cls()
         return cls(
             force_readonly=_env_bool(env, "FORCE_READONLY_DELETION", d.force_readonly),
-            appledouble=not _env_bool(env, "LEAVE_APPLEDOUBLE", not d.appledouble),
-            eadir=not _env_bool(env, "LEAVE_EADIR", not d.eadir),
-            ds_store=not _env_bool(env, "LEAVE_DS_STORE", not d.ds_store),
-            thumbs_db=not _env_bool(env, "LEAVE_THUMBS_DB", not d.thumbs_db),
-            desktop_ini=not _env_bool(env, "LEAVE_DESKTOP_INI", not d.desktop_ini),
+            leave_appledouble=_env_bool(env, "LEAVE_APPLEDOUBLE", d.leave_appledouble),
+            leave_eadir=_env_bool(env, "LEAVE_EADIR", d.leave_eadir),
+            leave_ds_store=_env_bool(env, "LEAVE_DS_STORE", d.leave_ds_store),
+            leave_thumbs_db=_env_bool(env, "LEAVE_THUMBS_DB", d.leave_thumbs_db),
+            leave_desktop_ini=_env_bool(env, "LEAVE_DESKTOP_INI", d.leave_desktop_ini),
             appledouble_max_size=_env_int(env, "MAX_SIZE", d.appledouble_max_size),
             parent_folder=_env_path(env, "PARENT_FOLDER", d.parent_folder),
-            delete_zip=not _env_bool(env, "LEAVE_ZIP", not d.delete_zip),
+            leave_zip=_env_bool(env, "LEAVE_ZIP", d.leave_zip),
             send_to_bin=_env_bool(env, "SEND_TO_BIN", d.send_to_bin),
             dry_run=_env_bool(env, "DRY_RUN", d.dry_run),
             log_file=_env_log_file(env, d.log_file),
@@ -96,14 +102,14 @@ class Config:
         on_off = lambda v: "ENABLED" if v else "disabled"
         return "\n".join([
             f"Parent folder      : {self.parent_folder or '(prompt)'}",
-            f"Delete ZIPs        : {on_off(self.delete_zip)}",
+            f"Delete ZIPs        : {on_off(not self.leave_zip)}",
             f"Read-only deletion : {on_off(self.force_readonly)}",
             f"Send to bin        : {on_off(self.send_to_bin)}",
             f"Dry run            : {'ENABLED (nothing will be changed)' if self.dry_run else 'disabled'}",
-            f"Remove AppleDouble : {on_off(self.appledouble)} (._ files <= {self.appledouble_max_size} bytes, empty ._ folders)",
-            f"Remove .DS_Store   : {on_off(self.ds_store)}",
-            f"Remove Thumbs.db   : {on_off(self.thumbs_db)}",
-            f"Remove desktop.ini : {on_off(self.desktop_ini)}",
-            f"Remove @eaDir      : {on_off(self.eadir)}",
+            f"Remove AppleDouble : {on_off(not self.leave_appledouble)} (._ files <= {self.appledouble_max_size} bytes, empty ._ folders)",
+            f"Remove .DS_Store   : {on_off(not self.leave_ds_store)}",
+            f"Remove Thumbs.db   : {on_off(not self.leave_thumbs_db)}",
+            f"Remove desktop.ini : {on_off(not self.leave_desktop_ini)}",
+            f"Remove @eaDir      : {on_off(not self.leave_eadir)}",
             f"Log to file        : {self.log_file_label()}",
         ])
