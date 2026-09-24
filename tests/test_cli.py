@@ -52,10 +52,12 @@ def test_old_dry_run_flag_still_works_and_beats_the_apply_variable():
 
 
 def test_apply_and_dry_run_cannot_be_combined(capsys):
-    with pytest.raises(SystemExit) as exit_info:
-        cli.parse_config(["--apply", "--dry-run"], environ={})
-    assert exit_info.value.code == 2
-    assert "not allowed with argument" in capsys.readouterr().err
+    for environ in ({}, {"ARCHIVIST_APPLY": "true"}):  # the variable makes --apply look like its default
+        for argv in (["--apply", "--dry-run"], ["--dry-run", "--apply"]):
+            with pytest.raises(SystemExit) as exit_info:
+                cli.parse_config(argv, environ=environ)
+            assert exit_info.value.code == 2
+            assert "not allowed with argument" in capsys.readouterr().err
 
 
 def test_dry_run_is_hidden_from_help(capsys):
@@ -190,10 +192,12 @@ def test_flag_beats_the_log_file_variable_in_both_directions(tmp_path, monkeypat
 
 
 def test_log_file_and_no_log_file_cannot_be_combined(capsys):
-    with pytest.raises(SystemExit) as exit_info:
-        cli.parse_config(["--log-file", "--no-log-file"], environ={})
-    assert exit_info.value.code == 2
-    assert "not allowed with argument" in capsys.readouterr().err
+    # A bare --log-file gives "", the same value as the default: the case older argparse missed.
+    for argv in (["--log-file", "--no-log-file"], ["--no-log-file", "--log-file"], ["--log-file", "x.log", "--no-log-file"]):
+        with pytest.raises(SystemExit) as exit_info:
+            cli.parse_config(argv, environ={})
+        assert exit_info.value.code == 2
+        assert "not allowed with argument" in capsys.readouterr().err
 
 
 @pytest.fixture
