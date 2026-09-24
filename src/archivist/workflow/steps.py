@@ -24,8 +24,13 @@ class ExtractArchives(Step):
         self.extractor = extractor
 
     def run(self, root: Path) -> dict[str, int]:
-        found, extracted = self.extractor.extract_all(root)
-        return {"ZIP files found": found, "ZIP files extracted": extracted}
+        result = self.extractor.extract_all(root)
+        return {
+            "ZIP files found": result.found,
+            "ZIP files extracted": result.extracted,
+            "ZIP files skipped (target exists)": result.skipped_existing,
+            "Files overwritten": result.overwritten,
+        }
 
 
 class RemoveAppleDoubleFiles(Step):

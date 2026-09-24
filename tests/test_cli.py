@@ -84,3 +84,28 @@ def test_report_goes_to_the_console_and_the_report_file_by_default(tmp_path, mak
 def test_no_log_file_writes_no_report_file(tmp_path):
     assert cli.main(["--parent-folder", str(tmp_path), "--no-log-file"]) == 0
     assert not (tmp_path / "report.log").exists()
+
+
+@pytest.fixture
+def existing_folder(tmp_path, make_zip, write_file):
+    make_zip(tmp_path / "photos.zip", {"a.jpg": "new"})
+    write_file(tmp_path / "photos" / "a.jpg", "old")
+    return tmp_path
+
+
+def test_terminal_run_asks_before_extracting_into_an_existing_folder(existing_folder, monkeypatch):
+    questions = []
+    monkeypatch.setattr("archivist.cli.entrypoint.is_interactive", lambda: True)
+    monkeypatch.setattr("builtins.input", lambda question: questions.append(question) or "y")
+    assert cli.main(["--parent-folder", str(existing_folder), "--no-log-file"]) == 0
+    assert len(questions) == 1
+    assert (existing_folder / "photos" / "a.jpg").read_text() == "new"
+
+
+@pytest.mark.parametrize("extra", [[], ["--dry-run"]])
+def test_no_question_without_a_terminal_or_in_a_dry_run(existing_folder, monkeypatch, extra):
+    # Without --dry-run there is no terminal; with --dry-run there is one, but nothing may be asked.
+    monkeypatch.setattr("archivist.cli.entrypoint.is_interactive", lambda: bool(extra))
+    monkeypatch.setattr("builtins.input", lambda question: pytest.fail(f"unexpected question: {question}"))
+    assert cli.main(["--parent-folder", str(existing_folder), "--no-log-file", *extra]) == 0
+    assert (existing_folder / "photos" / "a.jpg").read_text() == "old"

@@ -85,6 +85,8 @@ def test_run_extracts_nested_zips_and_cleans_metadata(photos, listing):
     assert run(Config(), photos) == {
         "ZIP files found": 2,
         "ZIP files extracted": 2,
+        "ZIP files skipped (target exists)": 0,
+        "Files overwritten": 0,
         "._ files removed": 1,
         ".DS_Store files removed": 1,
         "Thumbs.db files removed": 1,
@@ -103,6 +105,8 @@ def test_dry_run_changes_nothing(photos, listing, logs):
     assert report == {
         "ZIP files found": 1,
         "ZIP files extracted": 1,
+        "ZIP files skipped (target exists)": 0,
+        "Files overwritten": 0,
         "._ files removed": 0,
         ".DS_Store files removed": 0,
         "Thumbs.db files removed": 1,
@@ -118,6 +122,11 @@ def test_disabled_steps_leave_files_alone_and_stay_out_of_the_report(photos, lis
         delete_zip=False, appledouble=False, eadir=False, ds_store=False, thumbs_db=False, desktop_ini=False
     )
     report = run(config, photos)
-    assert report == {"ZIP files found": 2, "ZIP files extracted": 2}
+    assert report == {
+        "ZIP files found": 2,
+        "ZIP files extracted": 2,
+        "ZIP files skipped (target exists)": 0,
+        "Files overwritten": 0,
+    }
     kept = {"album.zip", "@eaDir", "._empty/Thumbs.db", "desktop.ini", "album/._a.jpg", "album/.DS_Store"}
     assert kept <= set(listing(photos))

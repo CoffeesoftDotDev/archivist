@@ -21,7 +21,7 @@ Archivist extracts every `.zip` under a parent folder, including ZIPs found insi
 Archivist finds `.zip` files in any case (`photos.zip`, `PHOTOS.ZIP`) and processes each one in four steps:
 
 1. Checks that the archive is safe to extract. It's skipped if it needs more space than is free (keeping 100 MB spare), or if it expands more than 100 times to over 1 GB, which is what a ZIP bomb does.
-2. Extracts it into a sibling folder with the same name (`photos.zip` becomes `photos/`). If that folder already exists, the archive is skipped. Files go into a hidden `.photos.archivist-tmp` folder first, which is renamed once everything is extracted, so a failed or interrupted extraction leaves nothing behind.
+2. Extracts it into a sibling folder with the same name (`photos.zip` becomes `photos/`). Files go into a hidden `.photos.archivist-tmp` folder first, which is renamed once everything is extracted, so a failed or interrupted extraction leaves nothing behind. If the folder already exists, see [Existing folders](#existing-folders).
 3. Restores the original file timestamps from the ZIP.
 4. Deletes the ZIP, unless you pass `--leave-zip`. Read-only ZIPs are kept unless you pass `--force`.
 
@@ -36,6 +36,41 @@ Archivist then removes, in this order:
 * `@eaDir` folders (Synology)
 
 A file counts as hidden when its name starts with a dot or, on Windows, when it has the hidden or system attribute. Each cleanup step can be turned off with its `--leave-*` option.
+
+### Existing folders
+
+When the folder an archive would be extracted to already exists, Archivist skips the archive at first. After each extraction pass, it lists these archives:
+
+```text
+2 archive(s) skipped because the target already exists:
+  C:\photos\2024.zip -> existing folder 2024
+  C:\photos\notes.zip -> notes is a file or link, not a folder
+```
+
+When you run Archivist in a terminal, it then asks about each archive whose target is a folder:
+
+```text
+2024.zip: folder "2024" already exists. Extract into it and overwrite files with the same name? [y]es / [n]o / [a]ll / [s]kip all:
+```
+
+| Answer         | Effect                                                            |
+|----------------|-------------------------------------------------------------------|
+| `y`            | Extract this archive into the folder                              |
+| `n` or Enter   | Skip this archive and keep the folder as it is                    |
+| `a`            | Extract this archive and every remaining one without asking again |
+| `s`            | Skip this archive and every remaining one without asking again    |
+
+Extracting into an existing folder adds the archive's files and overwrites files that have the same name. Other files in the folder are kept. The replaced files are removed like any other item, so `--send-to-bin` sends them to the Recycle Bin. Timestamps are restored, and the ZIP is then deleted unless you pass `--leave-zip`.
+
+The archive is extracted to the hidden staging folder and checked before the existing folder is touched. It's skipped, and the folder left unchanged, when:
+
+* The folder, or a file or subfolder the archive would write to, is a link or a Windows junction
+* The ZIP has a file where the folder has a subfolder, or the other way round
+* A file to overwrite is read-only and you didn't pass `--force`
+
+If moving a file fails partway through, for example because the disk is full, the files already moved stay in the folder, the file that failed keeps its old copy, and the ZIP is kept so you can run Archivist again.
+
+Without a terminal (Docker, CI, scheduled tasks) and in a `--dry-run`, Archivist doesn't ask: the archives are listed and skipped. The report counts them in `ZIP files skipped (target exists)`, and the replaced files in `Files overwritten`.
 
 ## Requirements
 
@@ -188,7 +223,7 @@ Keep these container specifics in mind:
 * The container runs as UID `65532` (`nonroot`), so it needs write access to the mounted folder. On Linux or a NAS, run `chown -R 65532 /path/to/photos` or add `--user $(id -u):$(id -g)`. Docker Desktop on Windows handles this for you.
 * The report is written to `/data/report.log`, which is the parent folder on the host.
 * There's no Trash in a container, so `--send-to-bin` moves items to a `.Trash-<uid>` folder inside the mounted folder.
-* There's no prompt. If no parent folder is set, the run fails with exit code `2`.
+* There's no prompt. If no parent folder is set, the run fails with exit code `2`, and archives whose folder already exists are skipped.
 
 ## Recycle Bin and Trash
 

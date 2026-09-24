@@ -10,6 +10,7 @@ from archivist.utils import (
     PermanentRemover,
     TrashRemover,
     find_files,
+    is_link,
     format_size,
     is_hidden,
     is_readonly,
@@ -130,3 +131,19 @@ def test_dry_run_reports_read_only_items_without_clearing_the_flag(tmp_path, wri
     assert DryRunRemover().remove_file(file) is False
     assert DryRunRemover(force_readonly=True).remove_file(file) is True
     assert is_readonly(file)
+
+
+def test_is_link_catches_symlinks_and_windows_junctions(tmp_path):
+    target = tmp_path / "target"
+    target.mkdir()
+    link = tmp_path / "link"
+    if os.name == "nt":
+        import _winapi
+
+        _winapi.CreateJunction(str(target), str(link))
+        assert not link.is_symlink()  # the case is_symlink() misses
+    else:
+        link.symlink_to(target, target_is_directory=True)
+    assert is_link(link)
+    assert not is_link(target)
+    assert not is_link(tmp_path / "missing")
