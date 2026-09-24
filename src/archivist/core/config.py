@@ -1,7 +1,9 @@
+"""The Config model: each option is declared once, on its field, with option()."""
 import os
-from collections.abc import Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Iterator, Mapping
+from dataclasses import Field, dataclass, field, fields
 from pathlib import Path
+from typing import Any
 
 APPLEDOUBLE_MAX_SIZE = 2048  # bytes (2 KB)
 ENV_PREFIX = "ARCHIVIST_"
@@ -10,31 +12,34 @@ _TRUE = {"1", "true", "yes", "on"}
 _FALSE = {"0", "false", "no", "off", ""}
 
 
-def _env_bool(env: Mapping[str, str], name: str, default: bool) -> bool:
-    raw = env.get(ENV_PREFIX + name)
-    if raw is None:
-        return default
+@dataclass(frozen=True)
+class Option:
+    """How a Config field is set from outside: its flags (none = hand-written in the parser) and variable."""
+    flags: tuple[str, ...]
+    env: str  # without the ARCHIVIST_ prefix
+    help: str
+    parse: Callable[[str], Any] | None  # None: chosen from the field type
+
+
+def option(default: Any, *flags: str, env: str, help: str = "", parse: Callable[[str], Any] | None = None) -> Any:
+    """Declare a Config field together with its flags, its ARCHIVIST_* variable and its help text."""
+    return field(default=default, metadata={Option: Option(flags, env, help, parse)})
+
+
+def _parse_bool(raw: str) -> bool:
     value = raw.strip().lower()
     if value in _TRUE:
         return True
     if value in _FALSE:
         return False
-    raise ValueError(f"{ENV_PREFIX}{name}={raw!r} is not a boolean (use true/false)")
+    raise ValueError("is not a boolean (use true/false)")
 
 
-def _env_int(env: Mapping[str, str], name: str, default: int) -> int:
-    raw = env.get(ENV_PREFIX + name)
-    if raw is None or raw.strip() == "":
-        return default
+def _parse_int(raw: str) -> int:
     try:
         return int(raw)
     except ValueError:
-        raise ValueError(f"{ENV_PREFIX}{name}={raw!r} is not a whole number") from None
-
-
-def _env_path(env: Mapping[str, str], name: str, default: Path | None) -> Path | None:
-    raw = env.get(ENV_PREFIX + name)
-    return default if raw is None or raw.strip() == "" else Path(raw)
+        raise ValueError("is not a whole number") from None
 
 
 def parse_log_file(raw: str) -> str | None:
@@ -50,28 +55,69 @@ def parse_log_file(raw: str) -> str | None:
     return value
 
 
-def _env_log_file(env: Mapping[str, str], default: str | None) -> str | None:
-    raw = env.get(ENV_PREFIX + "LOG_FILE")
-    return default if raw is None or raw.strip() == "" else parse_log_file(raw)
+# Converters by field type, for options that don't bring their own
+_PARSERS: dict[Any, Callable[[str], Any]] = {bool: _parse_bool, int: _parse_int, Path | None: Path}
 
 
 @dataclass(frozen=True)
 class Config:
-    """Runtime options for the extractor/cleaner. Every bool defaults to False, like its flag."""
-    force_readonly: bool = False
-    leave_appledouble: bool = False
-    leave_eadir: bool = False
-    leave_ds_store: bool = False
-    leave_thumbs_db: bool = False
-    leave_desktop_ini: bool = False
-    appledouble_max_size: int = APPLEDOUBLE_MAX_SIZE
-    parent_folder: Path | None = None
-    leave_zip: bool = False
-    send_to_bin: bool = False
-    apply: bool = False  # off: only show what would change (dry run)
-    # Three states, kept as one field with a hand-written converter and CLI pair (issue #3):
+    """
+    Runtime options for the extractor/cleaner. Every bool defaults to False, like its flag.
+    Fields are in --help order; see CONTRIBUTING.md, "Adding an option".
+    """
+    parent_folder: Path | None = option(
+        None, "--parent-folder", env="PARENT_FOLDER",
+        help="Parent folder to process. If omitted or empty, you will be prompted.",
+    )
+    leave_zip: bool = option(
+        False, "--leave-zip", env="LEAVE_ZIP",
+        help="Keep ZIP archives after extraction (default: they are deleted).",
+    )
+    leave_appledouble: bool = option(
+        False, "--leave-appledouble", env="LEAVE_APPLEDOUBLE",
+        help="Do not remove macOS AppleDouble metadata "
+             "(small '._' files and '._' folders with no visible files).",
+    )
+    leave_eadir: bool = option(
+        False, "--leave-eadir", env="LEAVE_EADIR",
+        help="Do not remove Synology '@eaDir' folders.",
+    )
+    leave_ds_store: bool = option(
+        False, "--leave-ds-store", env="LEAVE_DS_STORE",
+        help="Do not remove macOS '.DS_Store' files.",
+    )
+    leave_thumbs_db: bool = option(
+        False, "--leave-thumbs-db", env="LEAVE_THUMBS_DB",
+        help="Do not remove Windows 'Thumbs.db' thumbnail caches.",
+    )
+    leave_desktop_ini: bool = option(
+        False, "--leave-desktop-ini", env="LEAVE_DESKTOP_INI",
+        help="Do not remove Windows 'desktop.ini' files (they hold custom folder icons and names).",
+    )
+    appledouble_max_size: int = option(
+        APPLEDOUBLE_MAX_SIZE, "--max-size", env="MAX_SIZE",
+        help="Max size in bytes for '._' files to be removed (default: %(default)s).",
+    )
+    force_readonly: bool = option(
+        False, "--force-readonly-deletion", "--force", env="FORCE_READONLY_DELETION",
+        help="Clear the read-only flag and delete read-only files/folders "
+             "(default: read-only items are skipped).",
+    )
+    send_to_bin: bool = option(
+        False, "--send-to-bin", env="SEND_TO_BIN",
+        help="Send removed items to the Recycle Bin / Trash instead of deleting them permanently.",
+    )
+    # Hand-written flags (no flags here): --apply shares a group with the hidden --dry-run
+    apply: bool = option(False, env="APPLY")
+    # Three states, with a hand-written converter and flag pair (#3):
     # None = no file (--no-log-file), "" = <parent>/report.log (default, --log-file), otherwise a file or folder
-    log_file: str | None = ""
+    log_file: str | None = option("", env="LOG_FILE", parse=parse_log_file)
+
+    @staticmethod
+    def options() -> Iterator[tuple[Field, Option]]:
+        """Every field with its Option, in declaration order."""
+        for f in fields(Config):
+            yield f, f.metadata[Option]
 
     def log_file_label(self) -> str:
         if self.log_file is None:
@@ -82,21 +128,17 @@ class Config:
     def from_env(cls, environ: Mapping[str, str] | None = None) -> "Config":
         """Built-in defaults overridden by ARCHIVIST_* variables (read from os.environ unless given)."""
         env = os.environ if environ is None else environ
-        d = cls()
-        return cls(
-            force_readonly=_env_bool(env, "FORCE_READONLY_DELETION", d.force_readonly),
-            leave_appledouble=_env_bool(env, "LEAVE_APPLEDOUBLE", d.leave_appledouble),
-            leave_eadir=_env_bool(env, "LEAVE_EADIR", d.leave_eadir),
-            leave_ds_store=_env_bool(env, "LEAVE_DS_STORE", d.leave_ds_store),
-            leave_thumbs_db=_env_bool(env, "LEAVE_THUMBS_DB", d.leave_thumbs_db),
-            leave_desktop_ini=_env_bool(env, "LEAVE_DESKTOP_INI", d.leave_desktop_ini),
-            appledouble_max_size=_env_int(env, "MAX_SIZE", d.appledouble_max_size),
-            parent_folder=_env_path(env, "PARENT_FOLDER", d.parent_folder),
-            leave_zip=_env_bool(env, "LEAVE_ZIP", d.leave_zip),
-            send_to_bin=_env_bool(env, "SEND_TO_BIN", d.send_to_bin),
-            apply=_env_bool(env, "APPLY", d.apply),
-            log_file=_env_log_file(env, d.log_file),
-        )
+        values = {}
+        for f, opt in cls.options():
+            raw = env.get(ENV_PREFIX + opt.env)
+            if raw is None or raw.strip() == "":
+                continue  # unset or empty keeps the default
+            parse = opt.parse or _PARSERS[f.type]
+            try:
+                values[f.name] = parse(raw)
+            except ValueError as ex:
+                raise ValueError(f"{ENV_PREFIX}{opt.env}={raw!r} {ex}") from None
+        return cls(**values)
 
     def summary(self) -> str:
         on_off = lambda v: "ENABLED" if v else "disabled"
