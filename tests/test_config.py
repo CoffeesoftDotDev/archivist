@@ -10,7 +10,7 @@ def test_defaults_clean_everything_and_delete_permanently():
     config = Config()
     assert (config.leave_zip, config.leave_appledouble, config.leave_eadir) == (False, False, False)
     assert (config.leave_ds_store, config.leave_thumbs_db, config.leave_desktop_ini) == (False, False, False)
-    assert (config.force_readonly, config.send_to_bin, config.dry_run) == (False, False, False)
+    assert (config.force_readonly, config.send_to_bin, config.apply) == (False, False, False)
     assert config.appledouble_max_size == APPLEDOUBLE_MAX_SIZE
     assert config.parent_folder is None and config.log_file == ""
 
@@ -31,7 +31,7 @@ def test_from_env_reads_every_variable():
         "ARCHIVIST_MAX_SIZE": "4096",
         "ARCHIVIST_FORCE_READONLY_DELETION": "TRUE",
         "ARCHIVIST_SEND_TO_BIN": "true",
-        "ARCHIVIST_DRY_RUN": "true",
+        "ARCHIVIST_APPLY": "true",
         "ARCHIVIST_LOG_FILE": "run.log",
     }
     assert Config.from_env(env) == Config(
@@ -45,13 +45,22 @@ def test_from_env_reads_every_variable():
         appledouble_max_size=4096,
         force_readonly=True,
         send_to_bin=True,
-        dry_run=True,
+        apply=True,
         log_file="run.log",
     )
 
 
+def test_dry_run_variable_is_ignored():
+    assert Config.from_env({"ARCHIVIST_DRY_RUN": "false"}) == Config()
+
+
+def test_summary_shows_the_mode():
+    assert "Mode               : dry run (nothing will be changed, use --apply" in Config().summary()
+    assert "Mode               : APPLY (files will be changed)" in Config(apply=True).summary()
+
+
 def test_empty_variables_keep_defaults():
-    env = {"ARCHIVIST_MAX_SIZE": "", "ARCHIVIST_PARENT_FOLDER": " ", "ARCHIVIST_DRY_RUN": ""}
+    env = {"ARCHIVIST_MAX_SIZE": "", "ARCHIVIST_PARENT_FOLDER": " ", "ARCHIVIST_APPLY": ""}
     assert Config.from_env(env) == Config()
 
 
@@ -83,7 +92,7 @@ def test_parse_log_file(raw, expected):
     assert parse_log_file(raw) == expected
 
 
-@pytest.mark.parametrize(("name", "value"), [("ARCHIVIST_DRY_RUN", "maybe"), ("ARCHIVIST_MAX_SIZE", "big")])
+@pytest.mark.parametrize(("name", "value"), [("ARCHIVIST_APPLY", "maybe"), ("ARCHIVIST_MAX_SIZE", "big")])
 def test_invalid_values_name_the_variable(name, value):
     with pytest.raises(ValueError, match=name):
         Config.from_env({name: value})

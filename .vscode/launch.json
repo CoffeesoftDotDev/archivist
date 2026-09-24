@@ -6,16 +6,16 @@
             "type": "debugpy",
             "request": "launch",
             "module": "archivist",
-            "args": ["--parent-folder", "${input:parentFolder}", "--dry-run"],
+            "args": ["--parent-folder", "${input:parentFolder}"],
             // A real terminal, so the "Parent folder path:" prompt works when the input is left empty
             "console": "integratedTerminal"
         },
         {
-            "name": "archivist: real run (changes files)",
+            "name": "archivist: apply (changes files)",
             "type": "debugpy",
             "request": "launch",
             "module": "archivist",
-            "args": ["--parent-folder", "${input:parentFolder}"],
+            "args": ["--parent-folder", "${input:parentFolder}", "--apply"],
             "console": "integratedTerminal"
         }
     ],

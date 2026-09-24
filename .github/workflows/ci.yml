@@ -36,7 +36,7 @@ jobs:
           persist-credentials: false
       - name: Build
         run: docker build -t archivist:ci .
-      - name: Extract a sample ZIP as the non-root user
+      - name: Preview, then extract a sample ZIP as the non-root user
         run: |
           mkdir photos
           python3 - <<'EOF'
@@ -46,5 +46,9 @@ jobs:
           EOF
           chmod -R 777 photos
           docker run --rm -v "$PWD/photos:/data" archivist:ci
+          # One test per line: bash -e ignores failures inside an && chain
+          test -f photos/album.zip
+          test ! -e photos/album
+          docker run --rm -v "$PWD/photos:/data" archivist:ci --apply
           test -f photos/album/a.jpg
           test ! -e photos/album.zip

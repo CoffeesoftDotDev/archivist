@@ -21,7 +21,7 @@ def test_every_flag_maps_to_a_config_field():
     argv = [
         "--parent-folder", "photos", "--leave-zip", "--leave-appledouble", "--leave-eadir",
         "--leave-ds-store", "--leave-thumbs-db", "--leave-desktop-ini",
-        "--max-size", "10", "--force", "--send-to-bin", "--dry-run",
+        "--max-size", "10", "--force", "--send-to-bin", "--apply",
         "--log-file", "run.log",
     ]
     assert cli.parse_config(argv, environ={}) == Config(
@@ -35,9 +35,50 @@ def test_every_flag_maps_to_a_config_field():
         appledouble_max_size=10,
         force_readonly=True,
         send_to_bin=True,
-        dry_run=True,
+        apply=True,
         log_file="run.log",
     )
+
+
+def test_apply_comes_from_the_flag_or_the_variable():
+    assert cli.parse_config([], environ={}).apply is False
+    assert cli.parse_config(["--apply"], environ={}).apply is True
+    assert cli.parse_config([], environ={"ARCHIVIST_APPLY": "true"}).apply is True
+
+
+def test_old_dry_run_flag_still_works_and_beats_the_apply_variable():
+    assert cli.parse_config(["--dry-run"], environ={}).apply is False
+    assert cli.parse_config(["--dry-run"], environ={"ARCHIVIST_APPLY": "true"}).apply is False
+
+
+def test_apply_and_dry_run_cannot_be_combined(capsys):
+    with pytest.raises(SystemExit) as exit_info:
+        cli.parse_config(["--apply", "--dry-run"], environ={})
+    assert exit_info.value.code == 2
+    assert "not allowed with argument" in capsys.readouterr().err
+
+
+def test_dry_run_is_hidden_from_help(capsys):
+    with pytest.raises(SystemExit):
+        cli.parse_config(["--help"], environ={})
+    help_text = capsys.readouterr().out
+    assert "--apply" in help_text and "--dry-run" not in help_text
+
+
+@pytest.mark.parametrize(
+    ("argv", "environ", "expected"),
+    [
+        ([], {}, []),
+        (["--apply"], {"ARCHIVIST_APPLY": "true"}, []),
+        (["--dry-run"], {}, ["--dry-run is no longer needed"]),
+        ([], {"ARCHIVIST_DRY_RUN": "false"}, ["ARCHIVIST_DRY_RUN is no longer used and was ignored"]),
+    ],
+)
+def test_legacy_notes(argv, environ, expected):
+    notes = cli.parser.legacy_notes(argv, environ)
+    assert len(notes) == len(expected)
+    for note, start in zip(notes, expected):
+        assert note.startswith(start)
 
 
 def test_log_file_without_path_means_default_report():
@@ -74,11 +115,30 @@ def test_no_folder_and_no_terminal_exits_with_code_2(monkeypatch):
 
 def test_report_goes_to_the_console_and_the_report_file_by_default(tmp_path, make_zip, capsys):
     make_zip(tmp_path / "photos.zip", {"a.jpg": "x"})
-    assert cli.main(["--parent-folder", str(tmp_path)]) == 0
+    assert cli.main(["--parent-folder", str(tmp_path), "--apply"]) == 0
     assert (tmp_path / "photos" / "a.jpg").is_file()
     for output in (capsys.readouterr().out, (tmp_path / "report.log").read_text(encoding="utf-8")):
         assert "Operation completed" in output
         assert re.search(r"ZIP files extracted +: 1", output)
+
+
+def test_a_run_without_apply_changes_nothing(tmp_path, make_zip, listing, capsys):
+    make_zip(tmp_path / "photos.zip", {"a.jpg": "x", ".DS_Store": "ds"})
+    (tmp_path / "Thumbs.db").write_text("thumbs")
+    before = listing(tmp_path)
+    assert cli.main(["--parent-folder", str(tmp_path), "--no-log-file"]) == 0
+    assert listing(tmp_path) == before
+    output = capsys.readouterr().out
+    assert "Dry run completed: nothing was changed" in output
+    assert "Run again with --apply to make these changes." in output
+
+
+def test_leftover_dry_run_variable_is_ignored_with_a_warning(tmp_path, make_zip, monkeypatch, capsys):
+    zip_path = make_zip(tmp_path / "photos.zip", {"a.jpg": "x"})
+    monkeypatch.setenv("ARCHIVIST_DRY_RUN", "false")  # used to mean "change files"
+    assert cli.main(["--parent-folder", str(tmp_path), "--no-log-file"]) == 0
+    assert zip_path.exists() and not (tmp_path / "photos").exists()
+    assert "ARCHIVIST_DRY_RUN is no longer used and was ignored" in capsys.readouterr().out
 
 
 def test_no_log_file_writes_no_report_file(tmp_path):
@@ -116,7 +176,7 @@ def test_report_file_location(tmp_path, monkeypatch, case, source):
     written = sorted(p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*.log"))
     assert written == ([expected] if expected else [])
     if expected:
-        assert "Operation completed" in (tmp_path / expected).read_text(encoding="utf-8")
+        assert "Archivist run started" in (tmp_path / expected).read_text(encoding="utf-8")
 
 
 def test_flag_beats_the_log_file_variable_in_both_directions(tmp_path, monkeypatch):
@@ -147,15 +207,18 @@ def test_terminal_run_asks_before_extracting_into_an_existing_folder(existing_fo
     questions = []
     monkeypatch.setattr("archivist.cli.entrypoint.is_interactive", lambda: True)
     monkeypatch.setattr("builtins.input", lambda question: questions.append(question) or "y")
-    assert cli.main(["--parent-folder", str(existing_folder), "--no-log-file"]) == 0
+    assert cli.main(["--parent-folder", str(existing_folder), "--no-log-file", "--apply"]) == 0
     assert len(questions) == 1
     assert (existing_folder / "photos" / "a.jpg").read_text() == "new"
 
 
-@pytest.mark.parametrize("extra", [[], ["--dry-run"]])
-def test_no_question_without_a_terminal_or_in_a_dry_run(existing_folder, monkeypatch, extra):
-    # Without --dry-run there is no terminal; with --dry-run there is one, but nothing may be asked.
-    monkeypatch.setattr("archivist.cli.entrypoint.is_interactive", lambda: bool(extra))
+@pytest.mark.parametrize(
+    ("interactive", "extra"),
+    [(False, ["--apply"]), (True, [])],
+    ids=["applied without a terminal", "dry run in a terminal"],
+)
+def test_no_question_without_a_terminal_or_in_a_dry_run(existing_folder, monkeypatch, interactive, extra):
+    monkeypatch.setattr("archivist.cli.entrypoint.is_interactive", lambda: interactive)
     monkeypatch.setattr("builtins.input", lambda question: pytest.fail(f"unexpected question: {question}"))
     assert cli.main(["--parent-folder", str(existing_folder), "--no-log-file", *extra]) == 0
     assert (existing_folder / "photos" / "a.jpg").read_text() == "old"

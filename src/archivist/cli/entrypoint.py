@@ -4,7 +4,7 @@ from pathlib import Path
 
 from ..core import get_logger, resolve_log_path, setup_logging
 from ..workflow import WorkflowBuilder
-from .parser import parse_config
+from .parser import legacy_notes, parse_config
 from .prompts import MergePrompt
 
 log = get_logger()
@@ -68,8 +68,10 @@ def _run(argv: list[str] | None) -> int:
         log.info(line)
     if log_path:
         log.info(f"Report file        : {log_path}")
+    for note in legacy_notes(argv):
+        log.warning(note)
 
     # Nothing is merged in a dry run, so there is nothing to ask.
-    confirm_merge = MergePrompt() if is_interactive() and not config.dry_run else None
+    confirm_merge = MergePrompt() if is_interactive() and config.apply else None
     WorkflowBuilder(config, confirm_merge=confirm_merge).build().run(root)
     return 0

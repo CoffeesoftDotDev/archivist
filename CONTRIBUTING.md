@@ -8,8 +8,8 @@ description: Development setup, tests, debugging and project structure for Archi
 You need Python 3.10 or later and [uv](https://docs.astral.sh/uv/). From a clone of the repository:
 
 ```bash
-# Run the command from the working tree
-uv run archivist --parent-folder "C:\photos" --dry-run
+# Run the command from the working tree (a dry run until you add --apply)
+uv run archivist --parent-folder "C:\photos"
 
 # Or as a module
 uv run python -m archivist --help
@@ -33,8 +33,8 @@ Tests live in [tests/](tests), one file per module. The fixtures in [conftest.py
 
 Select the `.venv` interpreter and press F5. [launch.json](.vscode/launch.json) has two configurations, both asking for the parent folder:
 
-* `archivist: dry run` passes `--dry-run`
-* `archivist: real run (changes files)` changes the folder for real
+* `archivist: dry run` shows what would change
+* `archivist: apply (changes files)` passes `--apply` and changes the folder for real
 
 Leave the folder empty to get the prompt in the terminal instead.
 
@@ -43,7 +43,7 @@ Leave the folder empty to get the prompt in the terminal instead.
 [ci.yml](.github/workflows/ci.yml) runs on every push to `main` and every pull request:
 
 * `uv run --locked pytest` on Windows, macOS and Linux, with Python 3.10 and 3.13
-* A Docker build, followed by a run on a sample ZIP as the non-root user
+* A Docker build, followed by a dry run and then an `--apply` run on a sample ZIP as the non-root user
 
 `--locked` fails when [uv.lock](uv.lock) is out of date, so run `uv lock` after changing dependencies in [pyproject.toml](pyproject.toml).
 
