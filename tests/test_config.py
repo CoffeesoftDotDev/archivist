@@ -11,7 +11,7 @@ def test_defaults_clean_everything_and_delete_permanently():
     assert (config.ds_store, config.thumbs_db, config.desktop_ini) == (True, True, True)
     assert (config.force_readonly, config.send_to_bin, config.dry_run) == (False, False, False)
     assert config.appledouble_max_size == APPLEDOUBLE_MAX_SIZE
-    assert config.parent_folder is None and config.log_file is None
+    assert config.parent_folder is None and config.log_file == ""
 
 
 def test_from_env_without_variables_keeps_defaults():
@@ -56,7 +56,7 @@ def test_empty_variables_keep_defaults():
 
 @pytest.mark.parametrize(
     ("raw", "expected"),
-    [("true", ""), ("false", None), ("", None), ("logs/run.log", "logs/run.log")],
+    [("true", ""), ("false", None), ("off", None), ("", ""), ("logs/run.log", "logs/run.log")],
 )
 def test_log_file_variable(raw, expected):
     assert Config.from_env({"ARCHIVIST_LOG_FILE": raw}).log_file == expected

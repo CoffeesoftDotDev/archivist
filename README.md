@@ -83,14 +83,15 @@ If `--parent-folder` is not given, the script asks for the parent folder path.
 | `--force-readonly-deletion`, `--force` | off | Clear the read-only flag and delete read-only items (otherwise they are skipped) |
 | `--send-to-bin` | off | Send removed items to the Recycle Bin / Trash instead of deleting them permanently |
 | `--dry-run` | off | Show what would be extracted and removed without changing anything |
-| `--log-file [path]` | off | Also write the report to a file (appended, timestamped). No path: `<parent-folder>/report.log`. A folder path: `<folder>/report.log`. A file path: that file. |
+| `--log-file [path]` | `<parent-folder>/report.log` | Where to write the report file (appended, timestamped). No path: `<parent-folder>/report.log`. A folder path: `<folder>/report.log`. A file path: that file. |
+| `--no-log-file` | off | Don't write a report file (console only) |
 | `-h`, `--help` | | Show help |
 
-The report always appears in the console. `--log-file` writes the same report to a file as well.
+The report always appears in the console, and by default it's also written to `<parent-folder>/report.log`. Use `--log-file <path>` to put it somewhere else, or `--no-log-file` to skip the file.
 
 ### Dry run
 
-`--dry-run` shows what a real run would do without extracting, moving or deleting anything. A requested log file is still written.
+`--dry-run` shows what a real run would do without extracting, moving or deleting anything. The report file is still written unless you pass `--no-log-file`.
 
 - Each archive is opened read-only to count its items and the ZIPs nested inside it.
 - Files inside archives are not on disk yet, so nested ZIPs and `._` files inside archives are not counted.
@@ -125,8 +126,11 @@ archivist --parent-folder "C:\photos" --dry-run
 # Safe run: everything removed goes to the Recycle Bin
 archivist --parent-folder "C:\photos" --send-to-bin
 
-# Also write the report to C:\photos\report.log
-archivist --parent-folder "C:\photos" --log-file
+# The report is written to C:\photos\report.log by default
+archivist --parent-folder "C:\photos"
+
+# Console only, no report file
+archivist --parent-folder "C:\photos" --no-log-file
 
 # Custom report location
 archivist --parent-folder "C:\photos" --log-file "D:\logs\photos-2026.log"
@@ -152,7 +156,7 @@ Every option can also be set with an `ARCHIVIST_*` environment variable. **Prece
 | `ARCHIVIST_FORCE_READONLY_DELETION` | `--force` | `false` |
 | `ARCHIVIST_SEND_TO_BIN` | `--send-to-bin` | `false` |
 | `ARCHIVIST_DRY_RUN` | `--dry-run` | `false` |
-| `ARCHIVIST_LOG_FILE` | `--log-file [path]` | unset. `true` means `<parent>/report.log`, or give a path |
+| `ARCHIVIST_LOG_FILE` | `--log-file [path]` / `--no-log-file` | `<parent>/report.log`. Give a path to change it, or `false` to turn it off |
 
 Booleans accept `true/false`, `1/0`, `yes/no` and `on/off`.
 

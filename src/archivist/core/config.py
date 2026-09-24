@@ -38,9 +38,9 @@ def _env_path(env: Mapping[str, str], name: str, default: Path | None) -> Path |
 
 
 def _env_log_file(env: Mapping[str, str], default: str | None) -> str | None:
-    """unset/false -> default (no file), true -> "" (<parent>/report.log), else a path."""
+    """unset/empty -> default, false -> None (no file), true -> "" (<parent>/report.log), else a path."""
     raw = env.get(ENV_PREFIX + "LOG_FILE")
-    if raw is None:
+    if raw is None or raw.strip() == "":
         return default
     value = raw.strip()
     if value.lower() in _FALSE:
@@ -65,7 +65,7 @@ class Config:
     send_to_bin: bool = False
     dry_run: bool = False
     # None = no file logging, "" = default <parent>/report.log, otherwise a custom path
-    log_file: str | None = None
+    log_file: str | None = ""
 
     def log_file_label(self) -> str:
         if self.log_file is None:

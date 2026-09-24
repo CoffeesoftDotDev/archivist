@@ -95,16 +95,25 @@ def build_parser(defaults: Config) -> argparse.ArgumentParser:
         default=defaults.dry_run,
         help="Show what would be extracted and removed without changing anything.",
     )
-    parser.add_argument(
+    log_group = parser.add_mutually_exclusive_group()
+    log_group.add_argument(
         "--log-file",
         dest="log_file",
         nargs="?",
         const="",
         default=defaults.log_file,
         metavar="PATH",
-        help="Also write the report to PATH (a file, or a folder that will contain "
-             "report.log). Without PATH: <parent-folder>/report.log. "
+        help="Write the report to PATH (a file, or a folder that will contain "
+             "report.log). Default: <parent-folder>/report.log. "
              "The console always shows the report.",
+    )
+    log_group.add_argument(
+        "--no-log-file",
+        dest="log_file",
+        action="store_const",
+        const=None,
+        default=defaults.log_file,
+        help="Do not write the report to a file (console only).",
     )
     return parser
 
