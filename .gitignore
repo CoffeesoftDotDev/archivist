@@ -5,3 +5,6 @@ dist/
 build/
 *.egg-info/
 .pytest_cache/
+
+# Local Copilot planning and tracking files
+.copilot-tracking/
