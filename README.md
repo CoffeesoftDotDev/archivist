@@ -11,6 +11,12 @@ description: Recursively extract ZIP archives and clean macOS, Windows and Synol
   >
 </p>
 
+<p align="center">
+  <a href="https://coffeesoftdotdev.github.io/archivist/">Documentation</a>
+  ·
+  <a href="https://github.com/CoffeesoftDotDev/archivist">GitHub</a>
+</p>
+
 Archivist extracts every `.zip` under a parent folder, including ZIPs found inside other ZIPs, then removes the metadata files that macOS, Windows and Synology NAS devices leave behind when folders are copied between them.
 
 > [!IMPORTANT]

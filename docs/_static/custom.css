@@ -1,0 +1,12 @@
+.sidebar-brand_logo {
+  max-width: 128px;
+  border-radius: 50%;
+}
+
+.sd-card {
+  height: 100%;
+}
+
+.sd-card-title {
+  color: var(--color-foreground-primary);
+}

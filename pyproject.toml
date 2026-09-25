@@ -10,6 +10,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/CoffeesoftDotDev/archivist"
+Documentation = "https://coffeesoftdotdev.github.io/archivist/"
 Repository = "https://github.com/CoffeesoftDotDev/archivist"
 Issues = "https://github.com/CoffeesoftDotDev/archivist/issues"
 
@@ -19,6 +20,13 @@ archivist = "archivist.cli:main"
 [dependency-groups]
 dev = [
     "pytest>=8",
+]
+docs = [
+    "furo>=2025.12.19",
+    "myst-parser>=4,<5",
+    "sphinx>=8.1,<9",
+    "sphinx-copybutton>=0.5.2,<0.6",
+    "sphinx-design>=0.6.1,<0.7",
 ]
 
 [build-system]
