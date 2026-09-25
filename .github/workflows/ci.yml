@@ -39,11 +39,7 @@ jobs:
       - name: Preview, then extract a sample ZIP as the non-root user
         run: |
           mkdir photos
-          python3 - <<'EOF'
-          import zipfile
-          with zipfile.ZipFile("photos/album.zip", "w") as archive:
-              archive.writestr("a.jpg", "x")
-          EOF
+          python3 .github/workflows/scripts/create_sample_zip.py
           chmod -R 777 photos
           docker run --rm -v "$PWD/photos:/data" archivist:ci
           # One test per line: bash -e ignores failures inside an && chain
