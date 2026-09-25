@@ -5,7 +5,7 @@ description: Recursively extract ZIP archives and clean macOS, Windows and Synol
 
 <p align="center">
   <img
-    src="https://raw.githubusercontent.com/CoffeesoftDotDev/archivist/main/Archivist.png"
+    src="docs/assets/Archivist.png"
     alt="Archivist logo"
     width="320"
   >
@@ -123,6 +123,8 @@ If you leave out `--parent-folder`, Archivist asks for the folder in the termina
 ## Report
 
 Archivist prints a report to the console: the options in use, every file it extracts, removes or skips, and a count per step. The same report, with a timestamp and level on each line, is appended to `report.log` in the parent folder, so earlier runs stay in the file.
+
+![Archivist report summary](docs/assets/result.png)
 
 | Value                        | Report file                  |
 |------------------------------|------------------------------|
