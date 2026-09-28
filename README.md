@@ -344,7 +344,9 @@ records image listing, ZIP-aware previews, oldest-first numbered collision
 names, and human-approved extraction-and-move or source-preserving copy pipelines.
 These capabilities are implemented in the working tree; product/release sign-off
 and business measurements remain separate. The
-[agent and AG-UI proposal](docs/project-planning/future-spec.md) is deferred for later consideration.
+[future capability proposals](docs/project-planning/future-spec.md) cover deferred
+generic file categories (including STL/3MF), mixed-ZIP handling options, and the
+independent agent/AG-UI direction.
 
 ## Contributing
 

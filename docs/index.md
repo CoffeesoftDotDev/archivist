@@ -109,8 +109,9 @@ record the approved business scope, human approval, and measurement waiver.
 The [image workflow specification](project-planning/archivist-image-workflows.md)
 records the implemented CLI workflow and settled policies; formal product/release
 sign-off and business measurements remain separate.
-The [future agent specification](project-planning/future-spec.md) preserves the deferred
-conversational and AG-UI direction.
+The [future capability specification](project-planning/future-spec.md) preserves
+deferred generic file categories (including STL/3MF), mixed-ZIP policy options,
+and the independent conversational/AG-UI direction.
 
 :::{toctree}
 :hidden:

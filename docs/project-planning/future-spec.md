@@ -1,15 +1,16 @@
 ---
-title: Future specification - conversational Archivist
-description: Deferred exploration of an agent and AG-UI interface over the Archivist workflow
+title: Future specification - file categories and conversational workflows
+description: Deferred exploration of general-purpose file collection, mixed ZIP handling, and an agent and AG-UI interface
 status: deferred
-version: 0.1.0
+version: 0.2.0
 created_date: 2026-09-28
 last_updated: 2026-09-28
 ---
 
-> **Deferred exploration, not an implementation commitment.** The user explicitly
-> excluded the agent/AG-UI route from the current scope. This document preserves
-> the discussion for later consideration without adding runtime dependencies.
+> **Deferred exploration, not an implementation commitment.** General-purpose
+> file categories and the agent/AG-UI route are future capabilities, not implemented
+> commands. This document preserves both discussions without changing runtime
+> behavior, adding dependencies, or expanding the approved image-workflow scope.
 
 ## Relationship to the current specification
 
@@ -18,12 +19,175 @@ The active product-specification draft is
 Its CLI remains useful without an LLM, agent framework, server, or browser.
 Nothing in this document is a prerequisite for delivering that CLI scope.
 
-The user asked about chatting with an agent through AG-UI to decide which
+There are two independent future directions: collecting file categories beyond
+pictures, and conversational operation. Generic file collection does not require
+an agent, model, AG-UI frontend, or server.
+
+## General-purpose file collection
+
+### User need and proposed command model
+
+The user wants to collect other file types into a destination, initially `.stl`
+and `.3mf` 3D-printing files, with the same discovery, ZIP inspection, approval,
+copy/move and preservation safeguards as pictures.
+
+Separate the **action** from the **category** rather than adding one pair of flags
+per category. This scales better than `--list-pictures`, `--list-3d-files`,
+`--move-videos`, and a growing set of category-specific actions.
+
+The following syntax is a proposal only and is not accepted by the current CLI:
+
+```powershell
+# Inventory ordinary and archived pictures; write an inventory report.
+archivist --list-files --type pictures --parent-folder "C:\Collection"
+
+# Preview collection of STL and 3MF files, without mutation.
+archivist --move-files --type 3d --parent-folder "C:\Collection" --destination "D:\Models" --dry-run
+
+# List, request approval, extract relevant ZIPs, then move matching files.
+archivist --move-files --type 3d --parent-folder "C:\Collection" --destination "D:\Models" --apply
+
+# The same plan, but preserve source files and original ZIPs.
+archivist --move-files --type 3d --copy --parent-folder "C:\Collection" --destination "D:\Models" --apply
+
+# Narrow a category to a subset of its supported extensions.
+archivist --list-files --type 3d --filter STL --parent-folder "C:\Collection"
+```
+
+Use a shell-safe category token such as `3d`, not unquoted `3d files`: the latter
+is two command-line arguments. A quoted label such as `--type "3d files"` could
+be an alias later, but is not proposed as the canonical spelling.
+
+| Proposed category | Initial extension set | Meaning |
+|-------------------|-----------------------|---------|
+| `pictures` | Current supported image catalog | Preserve existing image selection semantics |
+| `3d` | `stl`, `3mf` | Collect whole model files; no conversion or model repair |
+
+Further categories, custom category definitions and multi-category selection are
+not part of this initial proposal. File classification is extension-based and
+case-insensitive, not a claim that a file's contents are valid for that format.
+Requiring `--type` on generic actions is recommended to avoid accidentally selecting
+every file. Unknown categories, empty filters and extensions outside the selected
+category should fail explicitly rather than silently broadening selection.
+
+### Proposed behavior and compatibility
+
+* Keep current picture/image flags supported. They should select the same
+  `pictures` category, not a separate implementation with different safety rules.
+* Treat `--filter` as a narrowing intersection with the category's extension set.
+  It must not implicitly add unrelated formats or select files inside a model
+  package.
+* Reuse the ordered workflow: **inventory -> human approval -> complete relevant
+  ZIP extraction -> move/copy**. Repeated actions and prerequisites execute once;
+  flag order must not change effects. Dry-run stops at inventory/report generation.
+* Report name, extension, category and full physical/archive-qualified source
+  location, plus counts by category, extension and archive. Show selected and
+  unselected archive-file counts separately; do not describe every archive entry
+  as transferred.
+* Preserve `pictures.log` for picture workflows. Category-based report naming,
+  such as `3d.log`, is a candidate requiring a compatibility decision before
+  implementation; retain an explicit `--log-file` override.
+* Keep flat, disjoint destinations, exclusive creation, oldest-first collision
+  suffixes, original-byte/date preservation, source snapshots, ZIP resource
+  limits and honest partial-failure outcomes.
+* Preserve each `.3mf` as an opaque file. Although 3MF is ZIP-based, it is a model
+  package, not an ordinary extraction archive: do not unpack its internals, collect
+  its thumbnail as a separate picture, or discard package relationships. An outer
+  `.zip` may contain a `.3mf`; collect that entire member unchanged. Apply the same
+  byte-preserving treatment to ASCII and binary STL.
+* Do not infer related assets or repair project references. Associated unselected
+  files remain at their source or in the safely extracted remainder; collecting
+  arbitrary future project formats may require a separate dependency policy.
+
+### Mixed ZIPs: selected files versus extraction scope
+
+**Current behavior:** `--filter` selects which pictures are inventoried and
+transferred; it does not filter the contents of a ZIP extraction. A relevant ZIP
+and its nested ZIPs are fully extracted before any selected picture moves.
+
+For `album.zip` containing `photo.jpeg` and `clip.mp4`, with JPEG selected:
+
+| Current operation | JPEG outcome | MP4 outcome | Original ZIP |
+|-------------------|--------------|-------------|--------------|
+| Listing or move/copy dry-run | Report the matching picture; no transfer | Not selected; remains in archive | Retained, no extraction |
+| Approved move | Move to the destination after full extraction | Remains in the sibling `album` extraction folder | Deleted only after complete extraction and successful transfers, unless `--leave-zip` |
+| Approved copy | Copy from private temporary extraction to the destination | Remains in the original archive; temporary extracted copy is cleaned up | Always retained unchanged |
+
+Unselected files are not deleted merely because they fail the filter. In move
+mode, deleting the original ZIP removes the container after **all** its contents
+have been materialized; it is not proof that all contents went to the requested
+destination. Use `--leave-zip` to retain the original container as well.
+Archive deletion is not archive rewriting: Archivist does not remove just the
+selected members from the original ZIP.
+
+For a move/copy request, an archive containing no matching files is not selected
+for extraction or deletion; an entirely empty selection performs neither transfer
+nor extraction. Separately requesting list-plus-extraction can extract inventoried
+ZIPs even without matching pictures, so its explicitly approved extraction effects
+must not be confused with transfer selection.
+
+**Recommended initial generic behavior:** retain this full-extraction policy and
+make the remainder visible before approval. Show selected files, unselected file
+counts/extensions, extraction locations, destination mappings and exact archive
+retention/deletion effects. For a ZIP containing an STL, a 3MF and a PDF, collecting
+`3d` sends only the STL/3MF to the destination and retains the PDF in the extracted
+remainder (move) or unchanged original ZIP (copy).
+
+**Possible later optimization:** selectively decompress only matching members,
+and nested ZIP containers needed to discover them. This is a separate policy
+decision, not an alternate implementation with identical side effects:
+
+* If unselected members have not been safely materialized elsewhere, the original
+  ZIP **must remain intact**, even after every selected file was transferred.
+* A source ZIP containing retained members cannot be reported as deleted or fully
+  moved. Report selected-member copies/transfers and archive retention separately.
+* Do not rewrite a ZIP to remove selected entries under ordinary move approval.
+  Such archive editing would need separate authorization, integrity checks and a
+  recovery design.
+* Preserve nested containers needed to retain unselected descendants. A filter,
+  partial extraction, CRC failure, cancellation or metadata-restoration failure
+  must never authorize disposal of their only remaining copy.
+
+Selective extraction could reduce temporary space and I/O for mixed archives,
+but cannot inherit the current full-extraction ZIP-deletion rule.
+
+### Implementation impact and acceptance candidates
+
+Generalize the current image-specific inventory/transfer selection around a small
+category-to-extension catalog. Reuse the planner, approval boundary, archive
+manifests, timestamp utility and executor; adapt CLI/environment configuration,
+report labels and counters, and compatibility tests. Do not add an agent or a
+plugin framework merely to support two categories. Existing CLI tests remain
+regression requirements, not candidates for replacement.
+
+These scenarios are future criteria, not claims of current support:
+
+| Scenario | Expected future result |
+|----------|------------------------|
+| List `3d` across folders and nested ordinary ZIPs | Return STL/3MF names, types, full locations and archive counts without extraction |
+| Approve a generic `3d` move | Extract relevant ZIPs first, then collect only approved models in the destination |
+| Copy a 3MF nested inside an ordinary ZIP | Destination 3MF bytes and supported original dates match; source ZIP remains unchanged |
+| Encounter a 3MF while listing pictures | Do not traverse model-package internals for thumbnails or textures |
+| Narrow `3d` with `--filter STL` | Select STL only; 3MF remains unselected and safely retained |
+| Select JPEG from a ZIP also containing MP4 | Show the MP4 remainder and archive disposition before approval; preserve the MP4 after execution |
+| Select models from a ZIP containing PDF notes | Transfer models only; retain the notes according to the explicit full/partial extraction policy |
+| Selectively extract JPEG while leaving MP4 compressed | Keep the original mixed ZIP intact; do not apply full-extraction deletion semantics |
+| Find no models during a generic transfer preview/apply | Report zero matches, without creating a destination or extracting/deleting archives |
+| Reject approval or fail extraction/transfer/date restoration | Preserve affected sources and not-yet-removed ZIPs; report completed versus remaining work |
+| Use existing picture aliases | Preserve established inventory, approval, report naming and transfer behavior |
+
+Before implementation, confirm the final category names/catalog, generic
+configuration/environment names and report filenames. Confirm full versus
+selective extraction and the corresponding archive-retention defaults explicitly.
+Selective extraction and archive rewriting must not be smuggled into the category
+refactor. This proposal does not amend the approved BRD or implement these flags.
+
+## Conversational product opportunity
+
+The user also asked about chatting with an agent through AG-UI to decide which
 operations to perform, with human approval for destructive or mutative actions.
 Microsoft Agent Framework was an interpretation used during the discussion,
 not a confirmed framework selection.
-
-## Product opportunity
 
 Let an operator discover files, discuss filters and destinations, review a proposed
 workflow, and authorize its execution through conversation. The agent would help
