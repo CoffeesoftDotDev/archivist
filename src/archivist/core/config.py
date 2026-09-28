@@ -7,6 +7,11 @@ from typing import Any
 
 APPLEDOUBLE_MAX_SIZE = 2048  # bytes (2 KB)
 ENV_PREFIX = "ARCHIVIST_"
+IMAGE_EXTENSIONS = frozenset({
+    "jpg", "jpeg", "png", "gif", "bmp", "tif", "tiff", "webp", "heic", "heif",
+    "avif", "ico", "svg", "arw", "cr2", "cr3", "nef", "nrw", "dng", "orf", "rw2",
+    "raf", "pef", "srw",
+})
 
 _TRUE = {"1", "true", "yes", "on"}
 _FALSE = {"0", "false", "no", "off", ""}
@@ -55,6 +60,15 @@ def parse_log_file(raw: str) -> str | None:
     return value
 
 
+def parse_image_filter(raw: str) -> tuple[str, ...]:
+    """Normalize an explicit image-extension selection, rejecting unknown or empty tokens."""
+    tokens = [token.strip().lower().removeprefix(".") for token in raw.split(",")]
+    invalid = [token for token in tokens if token not in IMAGE_EXTENSIONS]
+    if invalid:
+        raise ValueError(f"contains unsupported image extensions: {', '.join(repr(token) for token in invalid)}")
+    return tuple(sorted(set(tokens)))
+
+
 # Converters by field type, for options that don't bring their own
 _PARSERS: dict[Any, Callable[[str], Any]] = {bool: _parse_bool, int: _parse_int, Path | None: Path}
 
@@ -69,6 +83,27 @@ class Config:
         None, "--parent-folder", env="PARENT_FOLDER",
         help="Parent folder to process. If omitted or empty, you will be prompted.",
     )
+    list_images: bool = option(
+        False, "--list-images", "--list-pictures", env="LIST_IMAGES",
+        help="List pictures on disk and inside ZIPs; write pictures.log.",
+    )
+    move_images: bool = option(
+        False, "--move-images", "--move-pictures", env="MOVE_IMAGES",
+        help="Inventory, ask for approval, extract ZIPs, then move pictures.",
+    )
+    extract_zip: bool = option(
+        False, "--extract-zip", env="EXTRACT_ZIP",
+        help="Select ZIP extraction explicitly, without implicit metadata cleanup.",
+    )
+    destination: Path | None = option(
+        None, "--destination", env="DESTINATION",
+        help="Flat picture destination; relative paths use the current directory.",
+    )
+    copy: bool = option(
+        False, "--copy", env="COPY",
+        help="With --move-images, copy instead; preserve source pictures and ZIPs.",
+    )
+    image_filter: tuple[str, ...] | None = option(None, env="FILTER", parse=parse_image_filter)
     leave_zip: bool = option(
         False, "--leave-zip", env="LEAVE_ZIP",
         help="Keep ZIP archives after extraction (default: they are deleted).",
@@ -122,7 +157,25 @@ class Config:
     def log_file_label(self) -> str:
         if self.log_file is None:
             return "disabled"
-        return self.log_file or "<parent-folder>/report.log"
+        return self.log_file or ("<parent-folder>/pictures.log" if self.image_workflow else "<parent-folder>/report.log")
+
+    @property
+    def image_workflow(self) -> bool:
+        """Whether a ZIP-aware picture inventory is part of this run."""
+        return self.list_images or self.move_images
+
+    def validate_actions(self) -> None:
+        """Reject modifiers that do not have a corresponding action."""
+        if self.copy and not self.move_images:
+            raise ValueError("--copy requires --move-images / --move-pictures")
+        if self.destination is not None and not self.move_images:
+            raise ValueError("--destination requires --move-images / --move-pictures")
+        if self.image_filter is not None and not self.image_workflow:
+            raise ValueError("--filter requires --list-images or --move-images")
+        if self.move_images and self.apply and self.destination is None:
+            raise ValueError("--destination is required for an applied picture transfer")
+        if self.copy and (self.force_readonly or self.send_to_bin):
+            raise ValueError("--copy cannot be combined with source-deletion modifiers --force or --send-to-bin")
 
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None) -> "Config":
@@ -141,6 +194,17 @@ class Config:
         return cls(**values)
 
     def summary(self) -> str:
+        if self.image_workflow:
+            action = "COPY" if self.copy else "MOVE" if self.move_images else "LIST"
+            return "\n".join([
+                f"Parent folder      : {self.parent_folder or '(prompt)'}",
+                f"Picture action     : {action}",
+                f"Destination        : {self.destination or '(none)'}",
+                f"Image extensions   : {', '.join(self.image_filter or sorted(IMAGE_EXTENSIONS))}",
+                f"Mode               : {'APPLY (approval required)' if self.apply else 'dry run (inventory only)'}",
+                f"ZIP retention      : {'keep' if self.copy or self.leave_zip else 'delete only after complete extraction and successful transfer'}",
+                f"Log to file        : {self.log_file_label()}",
+            ])
         on_off = lambda v: "ENABLED" if v else "disabled"
         return "\n".join([
             f"Parent folder      : {self.parent_folder or '(prompt)'}",

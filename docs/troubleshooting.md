@@ -12,6 +12,23 @@ Dry run is the default. Review the report, then add `--apply` or set
 archivist --parent-folder "C:\photos" --apply
 ```
 
+Image transfers additionally require an explicit yes in an interactive terminal.
+Listing alone remains read-only even with `--apply`. No matching pictures is a
+no-op. See [Image workflows](usage.md) for action selection and approval rules.
+
+## An image workflow stopped partway through
+
+New image workflows stop on incomplete discovery, changed inputs, unsafe or
+occupied targets, extraction/transfer errors and report failures. They do not
+roll back completed moves. Read completed/remaining counts and retained-copy
+messages before retrying. Previously extracted folders may remain; original ZIPs
+not yet removed are retained. Existing extraction folders are not merged in image
+mode, so resolve those outputs deliberately before a new attempt.
+
+There is no overwrite switch for destination pictures. Source and destination must
+be disjoint. Source read-only flags are not cleared for picture moves; `--force`
+applies to ZIP disposal and legacy cleanup, and is rejected with `--copy`.
+
 ## An archive was skipped
 
 Common reasons include:
@@ -63,7 +80,7 @@ be a whole number.
 | Code | Meaning |
 |---|---|
 | `0` | The run finished. Individual skipped items remain in the report. |
-| `1` | An environment variable is invalid, or the run was cancelled with Ctrl+C. |
+| `1` | Invalid environment configuration, cancellation, or an incomplete/unapproved image workflow. |
 | `2` | Options, the parent folder, or the report destination are invalid. |
 
 ## Still blocked

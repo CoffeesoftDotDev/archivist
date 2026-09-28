@@ -5,6 +5,19 @@ from pathlib import Path
 CHOICES = "[y]es / [n]o / [a]ll / [s]kip all"
 
 
+class ImagePrompt:
+    """Require an explicit yes for one complete image plan; blank or EOF declines."""
+
+    def __init__(self, ask: Callable[[str], str] | None = None):
+        self.ask = ask or (lambda question: input(question))
+
+    def __call__(self, question: str) -> bool:
+        try:
+            return self.ask(question).strip().lower() in ("y", "yes")
+        except EOFError:
+            return False
+
+
 class MergePrompt:
     """
     Asks whether to extract an archive into its existing folder (a ConfirmMerge callback).

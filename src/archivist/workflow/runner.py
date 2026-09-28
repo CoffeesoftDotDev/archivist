@@ -15,6 +15,7 @@ class Workflow:
     def __init__(self, steps: list[Step], dry_run: bool = False):
         self.steps = steps
         self.dry_run = dry_run
+        self.exit_code = 0
 
     def run(self, root: Path) -> Report:
         report: Report = {}

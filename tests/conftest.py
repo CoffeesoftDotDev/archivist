@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+import struct
 import zipfile
 from pathlib import Path
 
@@ -70,3 +71,30 @@ def listing():
     def list_tree(root: Path) -> list[str]:
         return sorted(p.relative_to(root).as_posix() for p in root.rglob("*"))
     return list_tree
+
+
+@pytest.fixture
+def exif_photo():
+    """One-pixel grayscale JPEG with distinct original/digitized EXIF dates."""
+    def segment(marker, data):
+        return b"\xff" + bytes([marker]) + struct.pack(">H", len(data) + 2) + data
+
+    tiff = (
+        b"II" + struct.pack("<HI", 42, 8)
+        + struct.pack("<HHHII", 1, 0x8769, 4, 1, 26) + b"\0" * 4
+        + struct.pack("<H", 2)
+        + struct.pack("<HHII", 0x9003, 2, 20, 56)
+        + struct.pack("<HHII", 0x9004, 2, 20, 76)
+        + b"\0" * 4
+        + b"2001:02:03 04:05:06\0" + b"2002:03:04 05:06:07\0"
+    )
+    return (
+        b"\xff\xd8"
+        + segment(0xE1, b"Exif\0\0" + tiff)
+        + segment(0xDB, b"\0" + b"\x01" * 64)
+        + segment(0xC0, b"\x08\x00\x01\x00\x01\x01\x01\x11\x00")
+        + segment(0xC4, b"\x00\x01" + b"\0" * 16)
+        + segment(0xC4, b"\x10\x01" + b"\0" * 16)
+        + segment(0xDA, b"\x01\x01\x00\x00\x3f\x00")
+        + b"\x3f\xff\xd9"
+    )

@@ -63,8 +63,10 @@ src/archivist/
     parser.py              Options (defaults from ARCHIVIST_* variables) -> Config
     entrypoint.py          main(): folder prompt, logging outputs, exit codes
     prompts.py             MergePrompt: asks whether to extract into an existing folder
+                           ImagePrompt: approves the complete image plan
   workflow/                The run as a sequence of steps
     steps.py               The steps (Command pattern)
+    image_steps.py         Shared-state image inventory, approval, extraction and transfer commands
     builder.py             WorkflowBuilder: keeps the steps the config enables (Builder pattern)
     runner.py              Workflow: runs the steps in order and logs the report
   core/                    App-wide infrastructure
@@ -72,9 +74,12 @@ src/archivist/
     logger.py              Logging setup (console and report file)
   services/                Business logic, one class per job
     zip_extractor.py       ZipExtractor (nested ZIPs, staging folder, space and ZIP-bomb checks, existing folders)
+    image_inventory.py     Read-only image/ZIP inventory, timestamps, snapshots and path validation
+    image_transfer.py      Approval-bound ImageRun, reports, full extraction, naming and safe transfer
     metadata_cleaner.py    MetadataCleaner (._ files and folders, .DS_Store, Thumbs.db, desktop.ini, @eaDir)
   utils/                   Filesystem helpers and removal strategies, no business rules
     fs.py                  Hidden and read-only checks, any-case file search, sizes
+    timestamps.py          Exact original dates, native creation-time restoration and verification
     removers.py            Delete permanently, send to bin, or dry run (Strategy pattern)
 tests/                     pytest suite, one file per module
 ```
@@ -109,11 +114,27 @@ Fields are declared in `--help` order, and an empty or unset variable always kee
 Two rules keep options consistent:
 
 * Name each field after its flag and variable, and give it the flag's default. A `--leave-x` flag sets `leave_x`, which defaults to `False`; code that needs the positive meaning uses `not config.leave_x`.
-* An option that doesn't fit one of the types above is declared without flags and gets hand-written ones in `build_parser`, plus a `parse=` converter if its variable needs one. There are two today: `--apply`, which shares a group with the hidden `--dry-run`, and the log file (`--log-file [PATH]` / `--no-log-file`), declared in `add_log_file_options()` and converted by `parse_log_file()`.
+* An option that doesn't fit one of the types above is declared without flags and gets hand-written ones in `build_parser`, plus a `parse=` converter if its variable needs one. There are three today: `--apply` with the hidden `--dry-run`, the log file (`--log-file [PATH]` / `--no-log-file`) with `parse_log_file()`, and `--filter` with `parse_image_filter()`.
 
 ## Adding a step
 
 Write a `Step` subclass in [steps.py](src/archivist/workflow/steps.py), then add one `(enabled, step)` line to the sequence in `WorkflowBuilder.build()` in [builder.py](src/archivist/workflow/builder.py). File steps run before folder steps, so `._` folders emptied by an earlier step are removed in the same run.
+
+Image actions use [image_steps.py](src/archivist/workflow/image_steps.py) and a shared
+`ImageRun`; `Step.run()` still returns integer report counters. The builder owns
+prerequisite ordering and uniqueness. Keep inventory, approval, complete extraction
+and transfer distinct. Explicit `--extract-zip` with move/copy must not add a second
+legacy extraction stage. Image report validation happens before opening the file;
+do not route it through the legacy log-path helper's directory-creation side effect.
+Add behavior coverage to `test_image_inventory.py` or `test_image_workflow.py`,
+and preserve legacy tests and no-action defaults.
+
+Image inventory owns immutable original `FileTimes`; extraction, publication and
+transfer must use those dates rather than staging-file creation times. Restore and
+verify dates before unlinking sources. Keep image bytes opaque, including EXIF.
+Add timestamp-platform/ZIP metadata cases to `test_timestamps.py` and end-to-end
+EXIF/date cases to `test_image_workflow.py`. Native Windows and macOS checks require
+their respective hosts; simulated API checks are not native-platform evidence.
 
 ## Releases
 

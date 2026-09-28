@@ -13,6 +13,12 @@ Unset and empty environment variables preserve the default.
 | Option | Default | Purpose |
 |---|---|---|
 | `--parent-folder <path>` | Prompt | Folder to process |
+| `--list-images`, `--list-pictures` | Off | List image files and ZIP entries |
+| `--move-images`, `--move-pictures` | Off | List, approve, extract, then transfer pictures |
+| `--extract-zip` | Off | Explicit extraction without implicit cleanup |
+| `--destination <path>` | Unset | Flat, source-disjoint transfer destination; relative to current directory |
+| `--copy` | Off | Copy rather than move; requires a picture-transfer action |
+| `--filter <extensions>` | Image catalog | Comma-separated case-insensitive image extensions |
 | `--leave-zip` | Off | Keep ZIP archives after extraction |
 | `--leave-appledouble` | Off | Keep AppleDouble files and folders |
 | `--leave-eadir` | Off | Keep Synology `@eaDir` folders |
@@ -23,7 +29,8 @@ Unset and empty environment variables preserve the default.
 | `--force-readonly-deletion`, `--force` | Off | Clear read-only flags before removal |
 | `--send-to-bin` | Off | Use the Recycle Bin or Trash |
 | `--apply` | Off | Extract, move, and remove files |
-| `--log-file [path]` | `report.log` | Choose the report file or folder |
+| `--dry-run` | On without apply | Preview only; overrides `ARCHIVIST_APPLY=true` |
+| `--log-file [path]` | `report.log` / `pictures.log` | Choose the report file or folder; image workflows use `pictures.log` |
 | `--no-log-file` | Off | Disable file logging |
 
 ## Environment variables
@@ -31,6 +38,12 @@ Unset and empty environment variables preserve the default.
 | Variable | Option | Default |
 |---|---|---|
 | `ARCHIVIST_PARENT_FOLDER` | `--parent-folder` | Prompt, or `/data` in Docker |
+| `ARCHIVIST_LIST_IMAGES` | `--list-images` / `--list-pictures` | `false` |
+| `ARCHIVIST_MOVE_IMAGES` | `--move-images` / `--move-pictures` | `false` |
+| `ARCHIVIST_EXTRACT_ZIP` | `--extract-zip` | `false` |
+| `ARCHIVIST_DESTINATION` | `--destination` | Unset |
+| `ARCHIVIST_COPY` | `--copy` | `false` |
+| `ARCHIVIST_FILTER` | `--filter` | All supported image extensions |
 | `ARCHIVIST_LEAVE_ZIP` | `--leave-zip` | `false` |
 | `ARCHIVIST_LEAVE_APPLEDOUBLE` | `--leave-appledouble` | `false` |
 | `ARCHIVIST_LEAVE_EADIR` | `--leave-eadir` | `false` |
@@ -41,16 +54,21 @@ Unset and empty environment variables preserve the default.
 | `ARCHIVIST_FORCE_READONLY_DELETION` | `--force` | `false` |
 | `ARCHIVIST_SEND_TO_BIN` | `--send-to-bin` | `false` |
 | `ARCHIVIST_APPLY` | `--apply` | `false` |
-| `ARCHIVIST_LOG_FILE` | Logging options | `report.log` in the parent folder |
+| `ARCHIVIST_LOG_FILE` | Logging options | `report.log` (`pictures.log` for images) in the parent folder |
 
 Boolean variables accept `true`/`false`, `1`/`0`, `yes`/`no`, and `on`/`off`.
+Both flag vocabularies share the `*_IMAGES` variables; there are no `*_PICTURES`
+variables. `--copy` and `--destination` require a move action, and `--filter`
+requires an image action. Applying a transfer requires a destination; preview
+does not. Copy mode rejects `--force`/`--send-to-bin`. No variable grants human
+approval. See [Usage](usage.md) for the extension catalog and workflow rules.
 
 ## Logging values
 
 `ARCHIVIST_LOG_FILE` supports three modes:
 
 * Set a file or folder path to choose the destination
-* Use `true` to keep the default `report.log`
+* Use `true` to keep the workflow's default `report.log` or `pictures.log`
 * Use `false` to disable file logging
 
 ## Examples
