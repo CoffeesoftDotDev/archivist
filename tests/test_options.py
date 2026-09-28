@@ -9,20 +9,29 @@ from archivist.cli.parser import add_generated_option
 from archivist.core import Config
 from archivist.core.config import Option
 
-# The full --help text at a fixed width. It was captured from the hand-written parser before #1, and is
-# identical on Python 3.10 and 3.13; generating the flags must not change a character of it.
+# The full --help text at a fixed width, including generated flags and aliases.
 HELP = """\
-usage: archivist [-h] [--parent-folder PARENT_FOLDER] [--leave-zip] [--leave-appledouble]
-                 [--leave-eadir] [--leave-ds-store] [--leave-thumbs-db] [--leave-desktop-ini]
-                 [--max-size APPLEDOUBLE_MAX_SIZE] [--force-readonly-deletion] [--send-to-bin]
-                 [--apply] [--log-file [PATH] | --no-log-file]
+usage: archivist [-h] [--parent-folder PARENT_FOLDER] [--list-images] [--move-images]
+                 [--extract-zip] [--destination DESTINATION] [--copy] [--leave-zip]
+                 [--leave-appledouble] [--leave-eadir] [--leave-ds-store] [--leave-thumbs-db]
+                 [--leave-desktop-ini] [--max-size APPLEDOUBLE_MAX_SIZE]
+                 [--force-readonly-deletion] [--send-to-bin] [--filter EXTENSIONS] [--apply]
+                 [--log-file [PATH] | --no-log-file]
 
-Extract ZIPs recursively and clean macOS, Windows and Synology metadata.
+Inventory and transfer pictures, extract ZIPs, and clean filesystem metadata.
 
 options:
   -h, --help            show this help message and exit
   --parent-folder PARENT_FOLDER
                         Parent folder to process. If omitted or empty, you will be prompted.
+  --list-images, --list-pictures
+                        List pictures on disk and inside ZIPs; write pictures.log.
+  --move-images, --move-pictures
+                        Inventory, ask for approval, extract ZIPs, then move pictures.
+  --extract-zip         Select ZIP extraction explicitly, without implicit metadata cleanup.
+  --destination DESTINATION
+                        Flat picture destination; relative paths use the current directory.
+  --copy                With --move-images, copy instead; preserve source pictures and ZIPs.
   --leave-zip           Keep ZIP archives after extraction (default: they are deleted).
   --leave-appledouble   Do not remove macOS AppleDouble metadata (small '._' files and '._'
                         folders with no visible files).
@@ -38,11 +47,13 @@ options:
                         read-only items are skipped).
   --send-to-bin         Send removed items to the Recycle Bin / Trash instead of deleting them
                         permanently.
+  --filter EXTENSIONS   Comma-separated image extensions, e.g. JPG,Png,Jpeg,ARW.
   --apply               Make the changes: extract, move and delete. Without it, Archivist only
                         shows what it would do.
   --log-file [PATH]     Write the report to PATH (a file, or a folder that will contain
-                        report.log). Default: <parent-folder>/report.log. The console always shows
-                        the report.
+                        report.log, or pictures.log for image workflows). Default: <parent-
+                        folder>/report.log (pictures.log for images). The console always shows the
+                        report.
   --no-log-file         Do not write the report to a file (console only).
 """
 
@@ -52,7 +63,7 @@ SAMPLES = {bool: ([], "true", True), int: (["7"], "7", 7), Path | None: (["photo
 GENERATED = [(f.name, f.type, opt) for f, opt in Config.options() if opt.flags]
 
 
-def test_help_text_is_unchanged(monkeypatch):
+def test_help_text_matches_declared_options(monkeypatch):
     monkeypatch.setenv("COLUMNS", "100")
     assert build_parser(Config()).format_help() == HELP
 
@@ -66,15 +77,16 @@ def test_every_field_is_declared_with_a_unique_variable():
 @pytest.mark.parametrize(("name", "kind", "opt"), GENERATED, ids=[name for name, _, _ in GENERATED])
 def test_each_generated_option_is_set_by_every_flag_and_by_its_variable(name, kind, opt):
     args, raw, expected = SAMPLES[kind]
+    prerequisites = ["--move-images"] if name in ("destination", "copy") else []
     assert getattr(parse_config([], environ={}), name) == getattr(Config(), name)
     for flag in opt.flags:  # aliases too, such as --force
-        assert getattr(parse_config([flag, *args], environ={}), name) == expected
-    assert getattr(parse_config([], environ={f"ARCHIVIST_{opt.env}": raw}), name) == expected
+        assert getattr(parse_config([*prerequisites, flag, *args], environ={}), name) == expected
+    assert getattr(parse_config(prerequisites, environ={f"ARCHIVIST_{opt.env}": raw}), name) == expected
 
 
 def test_hand_written_options_have_no_generated_flag():
     hand_written = [f.name for f, opt in Config.options() if not opt.flags]
-    assert hand_written == ["apply", "log_file"]
+    assert hand_written == ["image_filter", "apply", "log_file"]
 
 
 def test_a_type_without_a_flag_shape_is_refused():

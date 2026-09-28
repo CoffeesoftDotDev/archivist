@@ -11,6 +11,8 @@ description: Recursive ZIP extraction and metadata cleanup for macOS, Windows, a
 
 Archivist recursively extracts ZIP files, restores timestamps, and removes the metadata left
 behind by macOS, Windows, and Synology devices.
+Explicit image workflows inventory pictures on disk and inside ZIPs, then move
+or copy approved selections into a flat destination.
 
 ::::{grid} 1 2 3 3
 :gutter: 3
@@ -100,6 +102,16 @@ archivist --parent-folder "C:\photos"
 archivist --parent-folder "C:\photos" --apply --send-to-bin
 ```
 
+## Product planning
+
+The [business requirements](project-planning/image-collection-consolidation-brd.md)
+record the approved business scope, human approval, and measurement waiver.
+The [image workflow specification](project-planning/archivist-image-workflows.md)
+records the implemented CLI workflow and settled policies; formal product/release
+sign-off and business measurements remain separate.
+The [future agent specification](project-planning/future-spec.md) preserves the deferred
+conversational and AG-UI direction.
+
 :::{toctree}
 :hidden:
 
@@ -109,4 +121,13 @@ configuration
 docker
 troubleshooting
 contributing
+:::
+
+:::{toctree}
+:hidden:
+:caption: Product planning
+
+project-planning/image-collection-consolidation-brd
+project-planning/archivist-image-workflows
+project-planning/future-spec
 :::

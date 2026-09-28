@@ -5,7 +5,7 @@ from pathlib import Path
 from ..core import get_logger, resolve_log_path, setup_logging
 from ..workflow import WorkflowBuilder
 from .parser import legacy_notes, parse_config
-from .prompts import MergePrompt
+from .prompts import ImagePrompt, MergePrompt
 
 log = get_logger()
 
@@ -52,6 +52,11 @@ def _run(argv: list[str] | None) -> int:
     root = resolve_root(config.parent_folder)
     if root is None:
         return 2
+    if config.image_workflow:
+        confirm_images = ImagePrompt() if is_interactive() and config.apply else None
+        workflow = WorkflowBuilder(config, confirm_images=confirm_images).build()
+        workflow.run(root)
+        return workflow.exit_code
 
     try:
         log_path = resolve_log_path(root, config.log_file)

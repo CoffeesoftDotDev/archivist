@@ -43,6 +43,11 @@ A container has no interactive prompt. Mount the folder at `/data` or set
 `ARCHIVIST_PARENT_FOLDER`.
 :::
 
+Image inventories work noninteractively, for example by appending `--list-images`
+to the run command; their default report is `/data/pictures.log`. Image transfers
+and list-plus-extraction refuse mutation without an interactive terminal and an
+explicit human yes. `ARCHIVIST_APPLY=true` cannot grant that approval.
+
 ## Docker Compose
 
 1. Copy `.env.example` to `.env`.

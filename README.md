@@ -19,10 +19,14 @@ description: Recursively extract ZIP archives and clean macOS, Windows and Synol
 
 Archivist extracts every `.zip` under a parent folder, including ZIPs found inside other ZIPs, then removes the metadata files that macOS, Windows and Synology NAS devices leave behind when folders are copied between them.
 
+Explicit image actions also inventory pictures on disk and inside ZIPs, then optionally collect them into one folder by moving or copying after human approval.
+
 > [!IMPORTANT]
 > Archivist only shows what it would do until you pass `--apply`. With `--apply`, it deletes each ZIP after extracting it and deletes metadata files permanently. Send removed items to the Recycle Bin with `--send-to-bin`, or keep the archives with `--leave-zip`.
 
 ## What it does
+
+Without explicit action flags, Archivist keeps the extraction-and-cleanup workflow described below. Image actions use the separate ordered stages in [Image workflows](#image-workflows), with no implicit metadata cleanup.
 
 Archivist finds `.zip` files in any case (`photos.zip`, `PHOTOS.ZIP`) and processes each one in four steps:
 
@@ -78,6 +82,53 @@ If moving a file fails partway through, for example because the disk is full, th
 
 Without a terminal (Docker, CI, scheduled tasks) and in a dry run, Archivist doesn't ask: the archives are listed and skipped. The report counts them in `ZIP files skipped (target exists)`, and the replaced files in `Files overwritten`.
 
+## Image workflows
+
+```powershell
+# List pictures, including nested ZIP entries, in C:\photos\pictures.log
+archivist --list-pictures --parent-folder "C:\photos" --filter JPG,Png,Jpeg,ARW
+
+# Same inventory, without extracting or creating a destination
+archivist --list-images --extract-zip --parent-folder "C:\photos" --dry-run
+archivist --move-pictures --parent-folder "C:\photos" --destination "D:\collected" --dry-run
+
+# List -> ask for approval -> fully extract relevant ZIPs -> move
+archivist --move-pictures --parent-folder "C:\photos" --destination "D:\collected" --apply
+
+# Same approval workflow, but leave original pictures and ZIPs unchanged
+archivist --move-pictures --copy --parent-folder "C:\photos" --destination "D:\collected" --apply
+```
+
+`--list-images`/`--list-pictures` and `--move-images`/`--move-pictures` are aliases.
+The builder supplies prerequisites once, regardless of flag order. `--apply` enables
+execution but does not replace the interactive approval; blank input, EOF, or no
+terminal prevents image mutations. Listing alone never extracts, even with `--apply`.
+Listing plus `--extract-zip --apply` lists, asks for approval, then extracts without
+moving pictures.
+
+The destination is flat and must not overlap the source tree. Relative destinations
+resolve against the current working directory. Existing files are never overwritten.
+Collisions receive `photo (001).jpg`, `(002)`, etc., oldest first; when creation time
+is unavailable, the report explicitly identifies original modification-time fallback.
+All colliding incoming files are numbered, even when the bare name is free.
+
+Moves extract complete archives into unused sibling folders before any picture moves.
+Nonselected contents remain there. Original ZIPs are deleted only after extraction
+and all transfers succeed; use `--leave-zip` to retain them. Copies use temporary
+storage outside the source, retain originals, and do not create source-side extraction
+folders. A failure stops the workflow, reports partial outcomes, and retains
+not-yet-removed ZIPs; completed moves are not rolled back.
+
+Picture bytes and embedded EXIF (including date taken) remain unchanged. Image
+workflows restore and verify original modification and available creation dates,
+including dates stored in ZIP metadata, before deleting sources. Missing dates are
+not invented; unsupported destination timestamp precision/support causes an explicit
+failure with originals retained. See [date preservation](docs/usage.md#photo-metadata-and-original-dates)
+for filesystem and archive limitations.
+
+See [Usage](docs/usage.md) for the report schema, supported formats, resource limits,
+and recovery constraints. Agent/AG-UI integration remains deferred.
+
 ## Requirements
 
 * Python 3.10 or later
@@ -110,6 +161,12 @@ If you leave out `--parent-folder`, Archivist asks for the folder in the termina
 | Option                                 | Default                      | Description                                                                                  |
 |----------------------------------------|------------------------------|----------------------------------------------------------------------------------------------|
 | `--parent-folder <path>`               | prompt                       | Folder to process. An empty value counts as not given                                        |
+| `--list-images`, `--list-pictures` | off | Inventory pictures on disk and in ZIPs |
+| `--move-images`, `--move-pictures` | off | Inventory, approve, extract, then transfer selected pictures |
+| `--extract-zip` | off | Explicit extraction; no implicit metadata cleanup |
+| `--destination <path>` | none | Flat picture destination; required for applying a transfer |
+| `--copy` | off | Copy instead of moving; requires a move-images/pictures action |
+| `--filter <extensions>` | image catalog | Comma-separated, case-insensitive image extensions |
 | `--leave-zip`                          | off                          | Keep ZIP archives after extraction                                                           |
 | `--leave-appledouble`                  | off                          | Keep AppleDouble metadata (small `._*` files and `._*` folders with no visible files)        |
 | `--leave-eadir`                        | off                          | Keep Synology `@eaDir` folders                                                               |
@@ -128,7 +185,10 @@ If you leave out `--parent-folder`, Archivist asks for the folder in the termina
 
 ## Report
 
-Archivist prints a report to the console: the options in use, every file it extracts, removes or skips, and a count per step. The same report, with a timestamp and level on each line, is appended to `report.log` in the parent folder, so earlier runs stay in the file.
+The legacy workflow prints options, actions and per-step counts, and appends the same
+timestamped report to `report.log`. Image workflows instead append a delimited
+`pictures.log` inventory with JSON image rows, source/timestamp provenance, counts and
+actual outcomes. They print the absolute report path and do not also create `report.log`.
 
 ![Archivist report summary](docs/assets/result.png)
 
@@ -141,10 +201,17 @@ Archivist prints a report to the console: the options in use, every file it extr
 | `--no-log-file`              | None, console only           |
 
 A folder path is any existing folder, or a path that ends with `/` or `\`. Missing parent folders are created.
+For image workflows, replace `report.log` with `pictures.log` in the defaults and
+folder examples above. Custom report paths cannot target an image/ZIP, hardlink to
+one, follow a link/junction, or create the picture destination before approval.
 
 ## Dry run
 
-Every run is a dry run until you pass `--apply` (or set `ARCHIVIST_APPLY=true`): Archivist shows what it would extract, move and delete, and changes nothing. The only file it writes is the report, unless you pass `--no-log-file`. The report ends with `Dry run completed: nothing was changed` and a reminder to run again with `--apply`.
+Every run is a dry run until you pass `--apply` (or set `ARCHIVIST_APPLY=true`).
+The report is the only permitted write, unless disabled with `--no-log-file`.
+Image listing, move dry-run, and copy dry-run have identical inventories and never
+prompt or create the destination; a destination is optional for preview.
+The following details describe the legacy extraction/cleanup preview:
 
 * Each archive is opened read-only to count its items and the ZIPs nested inside it.
 * Files inside archives aren't on disk yet, so nested ZIPs and `._` files inside archives aren't counted.
@@ -191,6 +258,12 @@ Every option can also be set with an `ARCHIVIST_*` environment variable. A comma
 | Variable                            | Option                         | Default                                                                        |
 |-------------------------------------|--------------------------------|--------------------------------------------------------------------------------|
 | `ARCHIVIST_PARENT_FOLDER`           | `--parent-folder`              | prompt (`/data` in Docker)                                                     |
+| `ARCHIVIST_LIST_IMAGES` | `--list-images` / `--list-pictures` | `false` |
+| `ARCHIVIST_MOVE_IMAGES` | `--move-images` / `--move-pictures` | `false` |
+| `ARCHIVIST_EXTRACT_ZIP` | `--extract-zip` | `false` |
+| `ARCHIVIST_DESTINATION` | `--destination` | unset |
+| `ARCHIVIST_COPY` | `--copy` | `false` |
+| `ARCHIVIST_FILTER` | `--filter` | all supported image extensions |
 | `ARCHIVIST_LEAVE_ZIP`               | `--leave-zip`                  | `false`                                                                        |
 | `ARCHIVIST_LEAVE_APPLEDOUBLE`       | `--leave-appledouble`          | `false`                                                                        |
 | `ARCHIVIST_LEAVE_EADIR`             | `--leave-eadir`                | `false`                                                                        |
@@ -201,7 +274,7 @@ Every option can also be set with an `ARCHIVIST_*` environment variable. A comma
 | `ARCHIVIST_FORCE_READONLY_DELETION` | `--force`                      | `false`                                                                        |
 | `ARCHIVIST_SEND_TO_BIN`             | `--send-to-bin`                | `false`                                                                        |
 | `ARCHIVIST_APPLY`                   | `--apply`                      | `false`                                                                        |
-| `ARCHIVIST_LOG_FILE`                | `--log-file` / `--no-log-file` | `<parent-folder>/report.log`. Set a path to move it, or `false` to turn it off |
+| `ARCHIVIST_LOG_FILE`                | `--log-file` / `--no-log-file` | `report.log` (`pictures.log` for images) in the parent folder; a path selects another location, `false` disables it |
 
 Booleans accept `true`/`false`, `1`/`0`, `yes`/`no` and `on`/`off`. An invalid value stops the run with a message naming the variable.
 
@@ -235,6 +308,7 @@ Keep these container specifics in mind:
 * The report is written to `/data/report.log`, which is the parent folder on the host.
 * There's no Trash in a container, so `--send-to-bin` moves items to a `.Trash-<uid>` folder inside the mounted folder.
 * There's no prompt. If no parent folder is set, the run fails with exit code `2`, and archives whose folder already exists are skipped.
+* Image inventories work without a terminal. Applying image transfers or list-plus-extraction requires an interactive terminal; unattended runs do not approve themselves.
 
 ## Recycle Bin and Trash
 
@@ -254,10 +328,23 @@ Keep these container specifics in mind:
 | Code | Meaning                                                                                        |
 |------|------------------------------------------------------------------------------------------------|
 | `0`  | The run finished                                                                               |
-| `1`  | An `ARCHIVIST_*` variable is invalid, or the run was cancelled with Ctrl+C                     |
+| `1`  | Invalid environment configuration, cancellation, or an incomplete/unapproved image workflow |
 | `2`  | Invalid options, the parent folder is missing or not given, or the report file can't be opened |
 
-Errors on individual archives or files are logged in the report and don't change the exit code.
+Legacy per-file errors retain their existing exit behavior. Image discovery,
+approval, extraction, transfer, cleanup and report errors instead produce a nonzero
+exit, with completed and remaining work reported.
+
+## Product planning
+
+The [business requirements](docs/project-planning/image-collection-consolidation-brd.md)
+record the approved business scope and its measurement waiver.
+The [image workflow specification](docs/project-planning/archivist-image-workflows.md)
+records image listing, ZIP-aware previews, oldest-first numbered collision
+names, and human-approved extraction-and-move or source-preserving copy pipelines.
+These capabilities are implemented in the working tree; product/release sign-off
+and business measurements remain separate. The
+[agent and AG-UI proposal](docs/project-planning/future-spec.md) is deferred for later consideration.
 
 ## Contributing
 

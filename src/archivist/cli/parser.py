@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from ..core import Config
-from ..core.config import ENV_PREFIX, Option
+from ..core.config import ENV_PREFIX, Option, parse_image_filter
 
 # Default for flags in a mutually exclusive group. Python 3.10's argparse (still in CI) only spots a clash
 # when a flag's value differs from its default ("is not"), so a bare --log-file ("") next to a "" default
@@ -20,11 +20,15 @@ def build_parser(defaults: Config) -> argparse.ArgumentParser:
     """Flags generated from the Config declarations, then the hand-written ones; `defaults` include the variables."""
     parser = argparse.ArgumentParser(
         prog="archivist",
-        description="Extract ZIPs recursively and clean macOS, Windows and Synology metadata.",
+        description="Inventory and transfer pictures, extract ZIPs, and clean filesystem metadata.",
     )
     for f, opt in Config.options():
         if opt.flags:
             add_generated_option(parser, f.name, f.type, opt, getattr(defaults, f.name))
+    parser.add_argument(
+        "--filter", dest="image_filter", type=parse_image_filter, default=defaults.image_filter,
+        metavar="EXTENSIONS", help="Comma-separated image extensions, e.g. JPG,Png,Jpeg,ARW.",
+    )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
         "--apply",
@@ -72,7 +76,8 @@ def add_log_file_options(parser: argparse.ArgumentParser) -> None:
         default=NOT_GIVEN,
         metavar="PATH",
         help="Write the report to PATH (a file, or a folder that will contain "
-             "report.log). Default: <parent-folder>/report.log. "
+             "report.log, or pictures.log for image workflows). "
+             "Default: <parent-folder>/report.log (pictures.log for images). "
              "The console always shows the report.",
     )
     group.add_argument(
@@ -98,7 +103,12 @@ def parse_config(argv: list[str] | None = None, environ: Mapping[str, str] | Non
     if ns.legacy_dry_run:
         # --dry-run must also beat ARCHIVIST_APPLY=true, as it did before --apply existed.
         ns.apply = False
-    return Config(**{f.name: getattr(ns, f.name) for f in fields(Config)})
+    config = Config(**{f.name: getattr(ns, f.name) for f in fields(Config)})
+    try:
+        config.validate_actions()
+    except ValueError as ex:
+        raise SystemExit(f"Invalid action configuration: {ex}") from None
+    return config
 
 
 def legacy_notes(argv: list[str] | None = None, environ: Mapping[str, str] | None = None) -> list[str]:
