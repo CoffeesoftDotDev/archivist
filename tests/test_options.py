@@ -33,10 +33,10 @@ options:
                         Flat picture destination; relative paths use the current directory.
   --copy                With --move-images, copy instead; preserve source pictures and ZIPs.
   --leave-zip           Keep ZIP archives after extraction (default: they are deleted).
-  --leave-appledouble   Do not remove macOS AppleDouble metadata (small '._' files and '._'
-                        folders with no visible files).
+  --leave-appledouble   Do not remove AppleDouble metadata (small '._' files and '._' folders with
+                        no visible files).
   --leave-eadir         Do not remove Synology '@eaDir' folders.
-  --leave-ds-store      Do not remove macOS '.DS_Store' files.
+  --leave-ds-store      Do not remove '.DS_Store' files.
   --leave-thumbs-db     Do not remove Windows 'Thumbs.db' thumbnail caches.
   --leave-desktop-ini   Do not remove Windows 'desktop.ini' files (they hold custom folder icons
                         and names).

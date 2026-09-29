@@ -1,6 +1,6 @@
 ---
 title: Archivist
-description: Recursively extract ZIP archives and clean macOS, Windows and Synology metadata
+description: Recursively extract ZIP archives and clean AppleDouble, Windows and Synology metadata
 ---
 
 <p align="center">
@@ -17,7 +17,7 @@ description: Recursively extract ZIP archives and clean macOS, Windows and Synol
   <a href="https://github.com/CoffeesoftDotDev/archivist">GitHub</a>
 </p>
 
-Archivist extracts every `.zip` under a parent folder, including ZIPs found inside other ZIPs, then removes the metadata files that macOS, Windows and Synology NAS devices leave behind when folders are copied between them.
+Archivist extracts every `.zip` under a parent folder, including ZIPs found inside other ZIPs, then removes common AppleDouble, Windows and Synology metadata artifacts.
 
 Explicit image actions also inventory pictures on disk and inside ZIPs, then optionally collect them into one folder by moving or copying after human approval.
 
@@ -39,10 +39,10 @@ ZIPs that come out of an archive are extracted in the same run, up to 10 levels 
 
 Archivist then removes, in this order:
 
-* AppleDouble `._*` files of 2 KB or less (macOS)
-* `.DS_Store` files (macOS)
+* AppleDouble `._*` files of 2 KB or less
+* `.DS_Store` files
 * `Thumbs.db` and `desktop.ini` files (Windows)
-* `._*` folders that hold no visible files in any of their subfolders (macOS)
+* `._*` folders that hold no visible files in any of their subfolders
 * `@eaDir` folders (Synology)
 
 A file counts as hidden when its name starts with a dot or, on Windows, when it has the hidden or system attribute. Each cleanup step can be turned off with its `--leave-*` option.
@@ -133,7 +133,7 @@ and recovery constraints. Agent/AG-UI integration remains deferred.
 
 * Python 3.10 or later
 * [uv](https://docs.astral.sh/uv/), which provides `uvx` (recommended)
-* Windows, macOS or Linux
+* Windows or Linux
 
 The only dependency, [Send2Trash](https://pypi.org/project/Send2Trash/), is installed automatically and powers `--send-to-bin`.
 
@@ -170,7 +170,7 @@ If you leave out `--parent-folder`, Archivist asks for the folder in the termina
 | `--leave-zip`                          | off                          | Keep ZIP archives after extraction                                                           |
 | `--leave-appledouble`                  | off                          | Keep AppleDouble metadata (small `._*` files and `._*` folders with no visible files)        |
 | `--leave-eadir`                        | off                          | Keep Synology `@eaDir` folders                                                               |
-| `--leave-ds-store`                     | off                          | Keep macOS `.DS_Store` files                                                                 |
+| `--leave-ds-store`                     | off                          | Keep `.DS_Store` files                                                                       |
 | `--leave-thumbs-db`                    | off                          | Keep Windows `Thumbs.db` thumbnail caches                                                    |
 | `--leave-desktop-ini`                  | off                          | Keep Windows `desktop.ini` files, which hold custom folder icons and names                   |
 | `--max-size <bytes>`                   | `2048`                       | Largest `._*` file to remove                                                                 |
@@ -312,12 +312,11 @@ Keep these container specifics in mind:
 
 ## Recycle Bin and Trash
 
-`--send-to-bin` uses Send2Trash, which works on every platform:
+`--send-to-bin` uses Send2Trash to integrate with the supported platforms' trash systems:
 
 | OS      | Destination                                                               |
 |---------|---------------------------------------------------------------------------|
 | Windows | Recycle Bin                                                               |
-| macOS   | Trash                                                                     |
 | Linux   | Desktop trash (`~/.local/share/Trash`, or `.Trash-<uid>` on other drives) |
 
 > [!CAUTION]

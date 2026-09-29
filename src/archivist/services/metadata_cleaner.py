@@ -1,4 +1,4 @@
-"""Cleanup service for macOS (._*, .DS_Store), Windows (Thumbs.db, desktop.ini) and Synology (@eaDir) metadata."""
+"""Cleanup service for AppleDouble (._*, .DS_Store), Windows and Synology metadata."""
 from pathlib import Path
 
 from ..core import get_logger

@@ -1,9 +1,7 @@
 import ctypes
-import errno
 import io
 import os
 import struct
-import sys
 import zipfile
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -48,7 +46,7 @@ def read_archive_dates(payload):
 def test_exact_native_filesystem_dates(tmp_path):
     source = tmp_path / "original.jpg"
     source.write_bytes(b"photo")
-    created = 1_234_567_800_987_654_300 if os.name == "nt" or sys.platform == "darwin" else None
+    created = 1_234_567_800_987_654_300 if os.name == "nt" else None
     dates = FileTimes(1_400_000_000_123_456_700, created, 1_500_000_000_123_456_700)
     dates.restore(source)
     assert FileTimes.read(source) == dates
@@ -64,7 +62,6 @@ def test_unknown_creation_is_not_inferred_or_restored(tmp_path, monkeypatch):
     current = FileTimes.read(path)
     setter = Mock(side_effect=AssertionError("Must not set an unknown creation date"))
     monkeypatch.setattr(timestamps, "_windows_creation_time", setter)
-    monkeypatch.setattr(timestamps, "_mac_creation_time", setter)
     FileTimes(1_000_000_000_000_000_000).restore(path)
     assert path.stat().st_mtime_ns == 1_000_000_000_000_000_000
     assert path.stat().st_atime_ns == current.accessed_ns
@@ -77,7 +74,6 @@ def test_unavailable_creation_setter_fails_explicitly(tmp_path, monkeypatch):
     monkeypatch.setattr(timestamps, "os", SimpleNamespace(
         name="posix", utime=os.utime,
     ))
-    monkeypatch.setattr(timestamps, "sys", SimpleNamespace(platform="linux"))
     with pytest.raises(OSError, match="cannot restore a known creation time"):
         FileTimes(1_000_000_000_000_000_000, 1_000_000_000_000_000_000).restore(path)
     assert path.exists()
@@ -104,35 +100,6 @@ def test_creation_verification_detects_ignored_setter(tmp_path, monkeypatch):
     monkeypatch.setattr(timestamps, "_creation_ns", lambda *args: 900)
     with pytest.raises(OSError, match="did not preserve the original creation time"):
         FileTimes(1_000_000_000_000_000_000, 800).restore(path)
-
-
-def test_macos_attribute_abi_read_write_and_errors(tmp_path, monkeypatch):
-    created = 1_100_000_000_123_456_789
-    path = tmp_path / "photo.jpg"
-
-    def get_date(name, attributes, buffer, size, flags):
-        assert name == os.fsencode(path) and size == 20 and flags == 1
-        assert ctypes.string_at(attributes, 24) == struct.pack("=HHIIIII", 5, 0, 0x200, 0, 0, 0, 0)
-        buffer.raw = struct.pack("=Iqq", 20, *divmod(created, 1_000_000_000))
-        return 0
-
-    def set_date(name, attributes, buffer, size, flags):
-        assert size == 16 and flags == 1
-        assert buffer.raw == struct.pack("=qq", *divmod(created, 1_000_000_000))
-        return 0
-
-    library = SimpleNamespace(getattrlist=Mock(side_effect=get_date), setattrlist=Mock(side_effect=set_date))
-    monkeypatch.setattr(timestamps.ctypes, "CDLL", lambda *args, **kwargs: library)
-    assert timestamps._mac_creation_time(path) == created
-    assert timestamps._mac_creation_time(path, created) == created
-    library.getattrlist.side_effect = lambda name, attributes, buffer, size, flags: 0
-    with pytest.raises(OSError, match="Invalid creation-time"):
-        timestamps._mac_creation_time(path)
-    library.setattrlist.side_effect = lambda *args: -1
-    ctypes.set_errno(errno.ENOTSUP)
-    with pytest.raises(OSError) as failure:
-        timestamps._mac_creation_time(path, created)
-    assert failure.value.errno == errno.ENOTSUP
 
 
 @pytest.mark.skipif(os.name != "nt", reason="Windows native FILETIME error adapter")
