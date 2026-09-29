@@ -42,7 +42,7 @@ Leave the folder empty to get the prompt in the terminal instead.
 
 [ci.yml](.github/workflows/ci.yml) runs on every push to `main` and every pull request:
 
-* `uv run --locked pytest` on Windows, macOS and Linux, with Python 3.10 and 3.13
+* `uv run --locked pytest` on Windows and Ubuntu, with Python 3.10 and 3.13
 * A Docker build, followed by a dry run and then an `--apply` run on a sample ZIP as the non-root user
 
 `--locked` fails when [uv.lock](uv.lock) is out of date, so run `uv lock` after changing dependencies in [pyproject.toml](pyproject.toml).
@@ -50,7 +50,7 @@ Leave the folder empty to get the prompt in the terminal instead.
 ## Project structure
 
 ```text
-.github/workflows/ci.yml   Tests on Windows, macOS and Linux, plus a Docker image check
+.github/workflows/ci.yml   Tests on Windows and Ubuntu, plus a Docker image check
 .vscode/launch.json        VS Code debug configurations (dry run, real run)
 pyproject.toml             Package metadata, `archivist` command, pytest settings
 Dockerfile                 Distroless image (multi-stage, uv build)
@@ -79,7 +79,7 @@ src/archivist/
     metadata_cleaner.py    MetadataCleaner (._ files and folders, .DS_Store, Thumbs.db, desktop.ini, @eaDir)
   utils/                   Filesystem helpers and removal strategies, no business rules
     fs.py                  Hidden and read-only checks, any-case file search, sizes
-    timestamps.py          Exact original dates, native creation-time restoration and verification
+    timestamps.py          Exact original dates, Windows creation-time restoration and verification
     removers.py            Delete permanently, send to bin, or dry run (Strategy pattern)
 tests/                     pytest suite, one file per module
 ```
@@ -133,7 +133,7 @@ Image inventory owns immutable original `FileTimes`; extraction, publication and
 transfer must use those dates rather than staging-file creation times. Restore and
 verify dates before unlinking sources. Keep image bytes opaque, including EXIF.
 Add timestamp-platform/ZIP metadata cases to `test_timestamps.py` and end-to-end
-EXIF/date cases to `test_image_workflow.py`. Native Windows and macOS checks require
+EXIF/date cases to `test_image_workflow.py`. Native Windows and Linux checks require
 their respective hosts; simulated API checks are not native-platform evidence.
 
 ## Releases

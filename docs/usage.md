@@ -108,9 +108,9 @@ the fallback. DOS timestamps have two-second precision and no timezone, so they
 use the current local timezone. Missing archive creation dates cannot be recovered:
 the newly created file has an OS-assigned creation time, not an original one.
 
-Windows and macOS have native creation-time restoration support. Other platforms
-may not expose source birth time or allow setting a known creation time, and some
-destination filesystems round dates. **A known creation/modification date that
+Windows has native creation-time restoration support. Linux may expose source
+birth time without supporting its restoration, and some destination filesystems
+round dates. **A known creation/modification date that
 cannot be preserved causes an explicit failure**, not a silently changed date.
 Original sources and not-yet-removed ZIPs are retained; earlier completed moves
 are not undone. Use a destination/platform supporting the original timestamps.
@@ -178,7 +178,7 @@ extracted content are processed in the same run, up to ten levels deep.
 After extraction, Archivist removes these items in order:
 
 * AppleDouble `._*` files at or below the configured maximum size
-* macOS `.DS_Store` files
+* `.DS_Store` files
 * Windows `Thumbs.db` and `desktop.ini` files
 * `._*` folders without visible content
 * Synology `@eaDir` folders

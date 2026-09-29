@@ -110,7 +110,7 @@ class Config:
     )
     leave_appledouble: bool = option(
         False, "--leave-appledouble", env="LEAVE_APPLEDOUBLE",
-        help="Do not remove macOS AppleDouble metadata "
+        help="Do not remove AppleDouble metadata "
              "(small '._' files and '._' folders with no visible files).",
     )
     leave_eadir: bool = option(
@@ -119,7 +119,7 @@ class Config:
     )
     leave_ds_store: bool = option(
         False, "--leave-ds-store", env="LEAVE_DS_STORE",
-        help="Do not remove macOS '.DS_Store' files.",
+        help="Do not remove '.DS_Store' files.",
     )
     leave_thumbs_db: bool = option(
         False, "--leave-thumbs-db", env="LEAVE_THUMBS_DB",

@@ -51,7 +51,7 @@ def test_copy_keeps_source_tree_bytes_metadata_and_archives(tmp_path, make_zip, 
 def test_disk_exif_and_original_dates_survive_transfer(tmp_path, write_file, exif_photo, copy):
     root = tmp_path / "source"
     source = write_file(root / "photo.jpg", exif_photo)
-    created = 1_234_567_800_123_456_700 if os.name == "nt" or sys.platform == "darwin" else None
+    created = 1_234_567_800_123_456_700 if os.name == "nt" else None
     dates = FileTimes(1_400_000_000_987_654_300, created, 1_500_000_000_000_000_000)
     dates.restore(source)
     original = FileTimes.read(source)
@@ -78,7 +78,7 @@ def test_nested_zip_exif_and_precise_dates_survive_every_stage(
     tmp_path, make_zip, exif_photo, monkeypatch, copy, publication_copy,
 ):
     root = tmp_path / "source"
-    created = 1_234_567_800_123_456_700 if os.name == "nt" or sys.platform == "darwin" else None
+    created = 1_234_567_800_123_456_700 if os.name == "nt" else None
     dates = FileTimes(1_400_000_000_987_654_300, created, 1_500_000_000_000_000_000)
     ticks = lambda value: value // 100 + FILETIME_EPOCH if value is not None else 0
     payload = b"\0" * 4 + struct.pack("<HHQQQ", 1, 24, ticks(dates.modified_ns), ticks(dates.accessed_ns), ticks(dates.created_ns))

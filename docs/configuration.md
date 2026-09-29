@@ -22,7 +22,7 @@ Unset and empty environment variables preserve the default.
 | `--leave-zip` | Off | Keep ZIP archives after extraction |
 | `--leave-appledouble` | Off | Keep AppleDouble files and folders |
 | `--leave-eadir` | Off | Keep Synology `@eaDir` folders |
-| `--leave-ds-store` | Off | Keep macOS `.DS_Store` files |
+| `--leave-ds-store` | Off | Keep `.DS_Store` files |
 | `--leave-thumbs-db` | Off | Keep Windows `Thumbs.db` files |
 | `--leave-desktop-ini` | Off | Keep Windows `desktop.ini` files |
 | `--max-size <bytes>` | `2048` | Largest AppleDouble file to remove |
