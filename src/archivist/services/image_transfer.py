@@ -39,9 +39,22 @@ class PlannedImage:
     destination: Path
 
 
-def plan_names(items: list[ImageItem], destination: Path) -> list[PlannedImage]:
+def plan_names(
+    items: list[ImageItem], destination: Path, *, max_entries: int | None = None,
+    path_guard: Callable[[Path], None] | None = None,
+) -> list[PlannedImage]:
     """Allocate oldest-first collision names, reserving existing and incoming names."""
-    occupied = {entry.name.casefold() for entry in destination.iterdir()} if destination.exists() else set()
+    occupied: set[str] = set()
+    if path_guard is not None:
+        path_guard(destination)
+    if destination.exists():
+        with os.scandir(destination) as entries:
+            for count, entry in enumerate(entries, 1):
+                if max_entries is not None and count > max_entries:
+                    raise ImageWorkflowError(f"Destination entry limit ({max_entries}) exceeded")
+                if path_guard is not None:
+                    path_guard(Path(entry.path))
+                occupied.add(entry.name.casefold())
     groups: dict[str, list[ImageItem]] = defaultdict(list)
     for item in items:
         member_path(zipfile.ZipInfo(item.name))
@@ -63,6 +76,64 @@ def plan_names(items: list[ImageItem], destination: Path) -> list[PlannedImage]:
             reserved.add(name.casefold())
             result.append(PlannedImage(item, destination / name))
     return result
+
+
+def check_nested_targets(archive: ArchiveRecord) -> None:
+    """Reject nested extraction directories that collide with archive contents."""
+    names = {member_path(member).as_posix().casefold() for member in archive.members}
+    for child in archive.children:
+        member = next(member for member in archive.members if member.filename == child.chain[-1])
+        target = member_path(member).with_suffix("").as_posix().casefold()
+        if target in names or any(name.startswith(target + "/") for name in names):
+            raise ImageWorkflowError(f"Nested extraction target conflicts with archive content: {child.location}")
+        check_nested_targets(child)
+
+
+@dataclass
+class PreparedImages:
+    """Internal shared preparation; this object never confers execution authority."""
+
+    images: list[PlannedImage]
+    archives: list[ArchiveRecord]
+    targets: dict[Path, Path]
+
+
+def prepare_images(
+    inventory: Inventory, destination: Path | None, *, copy: bool = False,
+    max_entries: int | None = None, source_guard: Callable[[Path], None] | None = None,
+    destination_guard: Callable[[Path], None] | None = None,
+) -> PreparedImages:
+    """Prepare exact names and extraction targets without reporting or writing."""
+    if inventory.problems:
+        raise ImageWorkflowError("Inventory is incomplete; no extraction or transfer is permitted")
+    inventory.verify()
+    if destination is not None:
+        destination = checked_path(destination)
+        if overlaps(inventory.root, destination):
+            raise ImageWorkflowError("Source and destination must be disjoint (neither may contain the other)")
+        if destination.exists() and not destination.is_dir():
+            raise ImageWorkflowError(f"Destination is not a directory: {destination}")
+    images = plan_names(
+        inventory.items, destination, max_entries=max_entries, path_guard=destination_guard,
+    ) if destination is not None else []
+    selected_outer = {item.path for item in inventory.items if item.archive is not None}
+    archives = [
+        archive for archive in inventory.archives
+        if destination is None or archive.outer in selected_outer
+    ]
+    targets: dict[Path, Path] = {}
+    for archive in archives:
+        check_nested_targets(archive)
+        if not copy:
+            target = archive.outer.with_suffix("")
+            member_path(zipfile.ZipInfo(target.name))
+            checked_path(target)
+            if source_guard is not None:
+                source_guard(target)
+            if os.path.lexists(target):
+                raise ImageWorkflowError(f"Extraction target already exists; no merge/overwrite permitted: {target}")
+            targets[archive.outer] = target
+    return PreparedImages(images, archives, targets)
 
 
 def copy_bytes(source: BinaryIO, destination: BinaryIO, expected: int) -> None:
@@ -204,24 +275,12 @@ class ImageRun:
         if config.move_images and not self.inventory.items:
             self.emit("No matching pictures; no extraction, transfer, or ZIP deletion.")
             return {}
-        self.inventory.verify()
-        if config.move_images:
-            assert self.destination is not None
-            self.plan = plan_names(self.inventory.items, self.destination)
-        selected_outer = {item.path for item in self.inventory.items if item.archive is not None}
-        self.selected_archives = [
-            archive for archive in self.inventory.archives
-            if not config.move_images or archive.outer in selected_outer
-        ]
-        for archive in self.selected_archives:
-            self._check_nested_targets(archive)
-            if not config.copy:
-                target = archive.outer.with_suffix("")
-                member_path(zipfile.ZipInfo(target.name))
-                checked_path(target)
-                if os.path.lexists(target):
-                    raise ImageWorkflowError(f"Extraction target already exists; no merge/overwrite permitted: {target}")
-                self.targets[archive.outer] = target
+        prepared = prepare_images(
+            self.inventory, self.destination if config.move_images else None, copy=config.copy,
+        )
+        self.plan = prepared.images
+        self.selected_archives = prepared.archives
+        self.targets = prepared.targets
         self._verify_targets()
         mode = "COPY" if config.copy else "MOVE" if config.move_images else "EXTRACT"
         self.emit(f"Planned mode: {mode}")
@@ -248,16 +307,6 @@ class ImageRun:
         self._verify_targets()
         self.approved = True
         return {"Approval granted": 1}
-
-    @staticmethod
-    def _check_nested_targets(archive: ArchiveRecord) -> None:
-        names = {member_path(member).as_posix().casefold() for member in archive.members}
-        for child in archive.children:
-            member = next(member for member in archive.members if member.filename == child.chain[-1])
-            target = member_path(member).with_suffix("").as_posix().casefold()
-            if target in names or any(name.startswith(target + "/") for name in names):
-                raise ImageWorkflowError(f"Nested extraction target conflicts with archive content: {child.location}")
-            ImageRun._check_nested_targets(child)
 
     def _verify_targets(self) -> None:
         if self.destination is not None:

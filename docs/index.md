@@ -119,6 +119,7 @@ and the independent conversational/AG-UI direction.
 getting-started
 usage
 configuration
+image-api
 docker
 troubleshooting
 contributing

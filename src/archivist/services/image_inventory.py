@@ -7,7 +7,7 @@ import stat
 import struct
 import zipfile
 import zlib
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -30,11 +30,21 @@ class ImageWorkflowError(RuntimeError):
     """An image workflow cannot safely continue."""
 
 
-def checked_path(path: Path) -> Path:
+def checked_path(path: Path, *, strict: bool = False) -> Path:
     """Resolve a path only after rejecting link or junction components."""
     absolute = Path(os.path.abspath(path.expanduser()))
     for part in (*reversed(absolute.parents), absolute):
-        if is_link(part):
+        if strict:
+            try:
+                info = part.lstat()
+            except FileNotFoundError:
+                break
+            linked = stat.S_ISLNK(info.st_mode) or bool(
+                getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+            )
+        else:
+            linked = is_link(part)
+        if linked:
             raise ImageWorkflowError(f"Links and junctions are not supported: {part}")
     return absolute.resolve()
 
@@ -249,13 +259,47 @@ class Inventory:
 class ImageInventory:
     """Scan ordinary files and ZIP directories without writing extracted files."""
 
-    def __init__(self, extensions: tuple[str, ...] | None = None):
+    def __init__(
+        self, extensions: tuple[str, ...] | None = None, *,
+        max_entries: int | None = None, max_archive_entries: int = MAX_ARCHIVE_ENTRIES,
+        path_guard: Callable[[Path], None] | None = None,
+    ):
         self.extensions = frozenset(extensions or IMAGE_EXTENSIONS)
+        self.max_entries = max_entries
+        self.max_archive_entries = min(max_archive_entries, MAX_ARCHIVE_ENTRIES)
+        self.path_guard = path_guard
+
+    def _folders(self, result: Inventory) -> Iterator[tuple[str, list[str], list[str]]]:
+        if self.max_entries is None and self.path_guard is None:
+            yield from os.walk(result.root, followlinks=False, onerror=lambda ex: result.problems.append(str(ex)))
+            return
+        pending = [result.root]
+        visited = 0
+        while pending:
+            folder = pending.pop()
+            directories: list[str] = []
+            files: list[str] = []
+            try:
+                if self.path_guard is not None:
+                    self.path_guard(folder)
+                with os.scandir(folder) as entries:
+                    for entry in entries:
+                        visited += 1
+                        if self.max_entries is not None and visited > self.max_entries:
+                            raise ImageWorkflowError(f"Filesystem entry limit ({self.max_entries}) exceeded")
+                        if self.path_guard is not None:
+                            self.path_guard(Path(entry.path))
+                        (directories if entry.is_dir(follow_symlinks=False) else files).append(entry.name)
+            except (OSError, ImageWorkflowError, ValueError) as ex:
+                result.problems.append(str(ex))
+                return
+            yield str(folder), directories, files
+            pending.extend(folder / name for name in reversed(directories))
 
     def scan(self, root: Path) -> Inventory:
         """Return all discoverable matches; problems mean the inventory is incomplete."""
         result = Inventory(checked_path(root))
-        for folder, directories, files in os.walk(result.root, followlinks=False, onerror=lambda ex: result.problems.append(str(ex))):
+        for folder, directories, files in self._folders(result):
             for name in sorted(directories):
                 path = Path(folder) / name
                 if is_link(path) or metadata_name(path.relative_to(result.root)):
@@ -272,6 +316,8 @@ class ImageInventory:
                     continue
                 result.protected_sources.append(path)
                 try:
+                    if self.path_guard is not None:
+                        self.path_guard(path)
                     snapshot = Snapshot.read(path)
                     if extension == "zip":
                         result.snapshots[path] = snapshot
@@ -297,8 +343,8 @@ class ImageInventory:
             raise ImageWorkflowError(f"ZIP nesting limit ({MAX_DEPTH}) reached at {chain!r}")
         members = tuple(archive.infolist())
         inventory.archive_entries += len(members)
-        if inventory.archive_entries > MAX_ARCHIVE_ENTRIES:
-            raise ImageWorkflowError(f"Archive entry limit ({MAX_ARCHIVE_ENTRIES}) exceeded")
+        if inventory.archive_entries > self.max_archive_entries:
+            raise ImageWorkflowError(f"Archive entry limit ({self.max_archive_entries}) exceeded")
         size = sum(member.file_size for member in members)
         packed = max(sum(member.compress_size for member in members), 1)
         if size > BOMB_MIN_SIZE and size / packed > MAX_RATIO:
