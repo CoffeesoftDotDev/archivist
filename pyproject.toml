@@ -1,7 +1,7 @@
 [project]
 name = "archivist"
 version = "0.2.0"
-description = "Recursively extract ZIP archives and clean macOS, Windows and Synology metadata."
+description = "Recursively extract ZIP archives and clean AppleDouble, Windows and Synology metadata."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

@@ -4,47 +4,11 @@ from __future__ import annotations
 import ctypes
 import errno
 import os
-import struct
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 NANOSECONDS = 1_000_000_000
 FILETIME_EPOCH = 116_444_736_000_000_000
-
-
-def _mac_creation_time(path: Path, value: int | None = None) -> int:
-    """Read or set Darwin birth time without a float or a leading setter length."""
-    class Attributes(ctypes.Structure):
-        _fields_ = [
-            ("bitmapcount", ctypes.c_uint16), ("reserved", ctypes.c_uint16),
-            ("commonattr", ctypes.c_uint32), ("volattr", ctypes.c_uint32),
-            ("dirattr", ctypes.c_uint32), ("fileattr", ctypes.c_uint32),
-            ("forkattr", ctypes.c_uint32),
-        ]
-
-    libc = ctypes.CDLL(None, use_errno=True)
-    attributes = Attributes(5, 0, 0x00000200, 0, 0, 0, 0)  # ATTR_CMN_CRTIME
-    function = libc.getattrlist if value is None else libc.setattrlist
-    function.argtypes = [
-        ctypes.c_char_p, ctypes.POINTER(Attributes), ctypes.c_void_p,
-        ctypes.c_size_t, ctypes.c_ulong,
-    ]
-    function.restype = ctypes.c_int
-    if value is None:
-        buffer = ctypes.create_string_buffer(20)  # uint32 length + two int64 timespec fields
-    else:
-        seconds, nanoseconds = divmod(value, NANOSECONDS)
-        buffer = ctypes.create_string_buffer(struct.pack("=qq", seconds, nanoseconds), 16)
-    if function(os.fsencode(path), ctypes.byref(attributes), buffer, len(buffer), 1) != 0:  # FSOPT_NOFOLLOW
-        code = ctypes.get_errno()
-        raise OSError(code, os.strerror(code), str(path))
-    if value is not None:
-        return value
-    if struct.unpack_from("=I", buffer.raw)[0] != 20:
-        raise OSError(f"Invalid creation-time attribute response: {path}")
-    seconds, nanoseconds = struct.unpack_from("=qq", buffer.raw, 4)
-    return seconds * NANOSECONDS + nanoseconds
 
 
 def _windows_creation_time(path: Path, value: int) -> None:
@@ -80,14 +44,12 @@ def _windows_creation_time(path: Path, value: int) -> None:
             raise ctypes.WinError(ctypes.get_last_error())
 
 
-def _creation_ns(path: Path, info: os.stat_result) -> int | None:
+def _creation_ns(info: os.stat_result) -> int | None:
     created = getattr(info, "st_birthtime_ns", None)
     if created is not None:
         return created
     if os.name == "nt":
         return info.st_ctime_ns
-    if sys.platform == "darwin":
-        return _mac_creation_time(path)
     return None
 
 
@@ -103,7 +65,7 @@ class FileTimes:
     def read(cls, path: Path) -> FileTimes:
         """Capture filesystem dates before reading file content."""
         info = path.stat()
-        return cls(info.st_mtime_ns, _creation_ns(path, info), info.st_atime_ns)
+        return cls(info.st_mtime_ns, _creation_ns(info), info.st_atime_ns)
 
     @property
     def ordering_ns(self) -> int:
@@ -118,14 +80,12 @@ class FileTimes:
             if self.created_ns is not None:
                 if os.name == "nt":
                     _windows_creation_time(path, self.created_ns)
-                elif sys.platform == "darwin":
-                    _mac_creation_time(path, self.created_ns)
                 else:
                     raise OSError(errno.ENOTSUP, "This platform cannot restore a known creation time")
             actual = path.stat()
             if actual.st_mtime_ns != self.modified_ns:
                 raise OSError("Destination filesystem changed modification-time precision")
-            if self.created_ns is not None and _creation_ns(path, actual) != self.created_ns:
+            if self.created_ns is not None and _creation_ns(actual) != self.created_ns:
                 raise OSError("Destination filesystem did not preserve the original creation time")
         except (OSError, OverflowError, ValueError) as ex:
             raise OSError(f"Cannot preserve original file dates for {path}: {ex}") from ex

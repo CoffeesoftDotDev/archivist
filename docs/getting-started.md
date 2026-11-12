@@ -7,7 +7,7 @@ description: Install Archivist and safely process your first folder
 
 * Python 3.10 or later
 * [uv](https://docs.astral.sh/uv/), which provides `uvx`
-* Windows, macOS, or Linux
+* Windows or Linux
 
 Send2Trash is the only runtime dependency. It is installed automatically and powers the optional
 Recycle Bin and Trash behavior.

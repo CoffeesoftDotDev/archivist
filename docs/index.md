@@ -1,6 +1,6 @@
 ---
 title: Archivist
-description: Recursive ZIP extraction and metadata cleanup for macOS, Windows, and Synology files
+description: Recursive ZIP extraction and metadata cleanup for AppleDouble, Windows, and Synology artifacts
 ---
 
 :::{image} assets/Archivist.png
@@ -10,7 +10,7 @@ description: Recursive ZIP extraction and metadata cleanup for macOS, Windows, a
 :::
 
 Archivist recursively extracts ZIP files, restores timestamps, and removes the metadata left
-behind by macOS, Windows, and Synology devices.
+in AppleDouble, Windows, and Synology formats.
 Explicit image workflows inventory pictures on disk and inside ZIPs, then move
 or copy approved selections into a flat destination.
 

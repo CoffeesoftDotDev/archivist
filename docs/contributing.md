@@ -47,8 +47,8 @@ Dependencies flow downward from `cli` to `workflow`, `services`, and `utils`. Ev
 
 ## Continuous integration
 
-CI runs the locked test suite on Windows, macOS, and Linux with Python 3.10 and 3.13. It also builds
-the Docker image and verifies preview and apply runs as the non-root user.
+CI runs the locked test suite on Windows and Ubuntu with Python 3.10 and 3.13. It also builds the
+Docker image and verifies preview and apply runs as the non-root user.
 
 ```bash
 uv run --locked pytest

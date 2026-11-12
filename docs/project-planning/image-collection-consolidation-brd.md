@@ -248,8 +248,9 @@ framework or class hierarchy.
 
 ### Portability
 
-Target platforms and installation compatibility remain product/engineering
-decisions. No new hosting environment or agent runtime is required.
+Windows and Linux are the only targeted operating systems. An Apple host is not
+a development, installation, or release prerequisite. No new hosting environment
+or agent runtime is required.
 
 ## Constraints
 

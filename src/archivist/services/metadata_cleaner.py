@@ -1,4 +1,4 @@
-"""Cleanup service for macOS, Windows and Synology metadata."""
+"""Cleanup service for AppleDouble, macOS, Windows and Synology metadata."""
 import os
 from pathlib import Path
 

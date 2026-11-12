@@ -214,8 +214,7 @@ def test_filesystem_without_birth_time_uses_mtime_not_ctime(tmp_path, write_file
         return info
 
     monkeypatch.setattr(Path, "stat", without_birthtime)
-    # Only timestamp capture changes platform, not pathlib's platform choice.
+    # Simulate POSIX timestamp capture without changing pathlib's platform choice.
     monkeypatch.setattr(timestamps, "os", SimpleNamespace(name="posix"))
-    monkeypatch.setattr(timestamps, "sys", SimpleNamespace(platform="linux"))
     item, = ImageInventory().scan(tmp_path).items
     assert item.timestamp == 2 and item.timestamp_source == "modification (fallback)"

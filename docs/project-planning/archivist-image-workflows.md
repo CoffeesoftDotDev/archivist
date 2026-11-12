@@ -253,11 +253,11 @@ unavailable; the output's OS-assigned creation time is not presented as original
 Do not infer creation from EXIF, modification or staging-file metadata.
 
 Restore and verify original modification and known creation dates before source
-removal. Native creation restoration exists for Windows and macOS; unsupported
-platforms/volumes or timestamp rounding produce explicit failure, retaining the
-affected source and not-yet-removed ZIPs. Earlier successful transfers are not
-rolled back. Access-time bookkeeping and POSIX metadata-change `ctime` are excluded
-from the exact-date guarantee. The legacy extraction-only workflow is unchanged.
+removal. Native creation restoration exists for Windows; Linux volumes that do
+not support required timestamp restoration produce explicit failure, retaining
+the affected source and not-yet-removed ZIPs. Earlier successful transfers are
+not rolled back. Access-time bookkeeping and POSIX metadata-change `ctime` are
+excluded from the exact-date guarantee. The legacy extraction-only workflow is unchanged.
 
 ### Filename collision handling
 
@@ -382,9 +382,11 @@ codes follow the resolution register below.
 ### Portability
 
 **NFR-009:** The feature shall remain usable through the existing Python CLI on
-Windows, macOS, and Linux without an agent service. Absolute and relative path
-cases, mixed-case extensions, and cross-volume movement require platform-specific
-acceptance. Raising the current Python 3.10 minimum is not proposed.
+Windows and Linux without an agent service; these are the only targeted operating
+systems. macOS is unsupported; an Apple host is not a development, installation,
+or release prerequisite. Absolute and relative path cases, mixed-case extensions,
+and cross-volume movement require acceptance on the targeted platforms. Raising
+the current Python 3.10 minimum is not proposed.
 
 ## Constraints
 
@@ -394,6 +396,7 @@ acceptance. Raising the current Python 3.10 minimum is not proposed.
 | CON-002 | User / operational | List and obtain human approval before extraction and movement in every move workflow |
 | CON-003 | User / scope | Agent Framework, AG-UI, model integration, and chat UI are future considerations only |
 | CON-004 | User / delivery | The subsequent explicit implementation request authorizes source, tests and related docs, not operations on actual user collections, releases or remote tracker writes |
+| CON-005 | User / platform scope | Support Windows and Linux only; macOS is unsupported and no Apple host is required for development, installation, CI, or release acceptance |
 
 These boundaries can change only through an explicit product-scope revision.
 
@@ -435,10 +438,12 @@ request. Without explicit action flags, legacy extraction and cleanup remain.
 
 The criteria are implemented and covered by focused filesystem/CLI fixtures in
 `tests/test_image_inventory.py` and `tests/test_image_workflow.py`, alongside the
-existing suite. Local Windows execution is evidence for the implementation,
-not formal product approval or cross-platform release acceptance. Link scenarios
-requiring unavailable host symlink privileges are explicitly skipped; CI owns
-the remaining platform coverage.
+existing suite. Acceptance targets Windows and Linux; CI runs Windows and Ubuntu
+jobs, and no macOS host or macOS acceptance run is required. Local Windows
+execution is evidence for the implementation, not formal product approval or
+cross-platform release acceptance. Link scenarios requiring unavailable host
+symlink privileges are explicitly skipped; CI owns the remaining targeted
+platform coverage.
 
 | ID | Given / When / Then |
 |----|---------------------|
