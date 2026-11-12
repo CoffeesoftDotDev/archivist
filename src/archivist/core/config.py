@@ -160,7 +160,7 @@ class Config:
 
     def log_file_label(self) -> str:
         if self.log_file is None:
-            return "disabled"
+            return "DISABLED"
         return self.log_file or ("<parent-folder>/pictures.log" if self.image_workflow else "<parent-folder>/report.log")
 
     @property
@@ -199,30 +199,59 @@ class Config:
                 raise ValueError(f"{ENV_PREFIX}{opt.env}={raw!r} {ex}") from None
         return cls(**values)
 
-    def summary(self) -> str:
+    def summary(self, *, parent_folder: Path | None = None, report_file: Path | None = None) -> str:
+        """Group current settings and apply-only actions, using resolved paths when supplied."""
+        def group(title: str, rows: list[tuple[str, str]]) -> list[str]:
+            width = max(len(label) for label, _ in rows)
+            return [title, *(f"|- {label:<{width}} : {value}" for label, value in rows)]
+
+        mode = "apply : write" if self.apply else "dry-run : read-only"
+        if self.image_workflow and self.apply:
+            mode_label = (
+                "APPLY (write; approval required)" if self.move_images or self.extract_zip
+                else "APPLY (read-only; inventory only)"
+            )
+        else:
+            mode_label = "APPLY (write)" if self.apply else "DRY-RUN (read-only)"
+        settings = [
+            ("Parent Folder", str(parent_folder or self.parent_folder or "(prompt)")),
+            ("Mode", mode_label),
+        ]
         if self.image_workflow:
             action = "COPY" if self.copy else "MOVE" if self.move_images else "LIST"
-            return "\n".join([
-                f"Parent folder      : {self.parent_folder or '(prompt)'}",
-                f"Picture action     : {action}",
-                f"Destination        : {self.destination or '(none)'}",
-                f"Image extensions   : {', '.join(self.image_filter or sorted(IMAGE_EXTENSIONS))}",
-                f"Mode               : {'APPLY (approval required)' if self.apply else 'dry run (inventory only)'}",
-                f"ZIP retention      : {'keep' if self.copy or self.leave_zip else 'delete only after complete extraction and successful transfer'}",
-                f"Log to file        : {self.log_file_label()}",
-            ])
-        on_off = lambda v: "ENABLED" if v else "disabled"
-        return "\n".join([
-            f"Parent folder      : {self.parent_folder or '(prompt)'}",
-            f"Delete ZIPs        : {on_off(not self.leave_zip)}",
-            f"Read-only deletion : {on_off(self.force_readonly)}",
-            f"Send to bin        : {on_off(self.send_to_bin)}",
-            f"Mode               : {'APPLY (files will be changed)' if self.apply else 'dry run (nothing will be changed, use --apply to make the changes)'}",
-            f"Remove AppleDouble : {on_off(not self.leave_appledouble)} (._ files <= {self.appledouble_max_size} bytes, empty ._ folders)",
-            f"Remove .DS_Store   : {on_off(not self.leave_ds_store)}",
-            f"Remove Thumbs.db   : {on_off(not self.leave_thumbs_db)}",
-            f"Remove desktop.ini : {on_off(not self.leave_desktop_ini)}",
-            f"Remove @eaDir      : {on_off(not self.leave_eadir)}",
-            f"Remove _MACOSX     : {on_off(self.remove_macosx)} (also __MACOSX)",
-            f"Log to file        : {self.log_file_label()}",
-        ])
+            settings += [
+                ("Picture Action", action),
+                ("Destination", str(self.destination or "(none)")),
+                ("Image Extensions", ", ".join(self.image_filter or sorted(IMAGE_EXTENSIONS))),
+                ("ZIP Retention", "keep" if self.copy or self.leave_zip else
+                 "delete only after complete extraction and successful transfer"),
+            ]
+        else:
+            settings.append((
+                "AppleDouble Rules",
+                f"._ files <= {self.appledouble_max_size} bytes; ._ folders without visible files",
+            ))
+        settings.append(("Log to File", self.log_file_label()))
+        if report_file is not None:
+            settings.append(("Report File", str(report_file)))
+        current = group("Current Config", settings)
+        if self.image_workflow:
+            return "\n".join(current)
+
+        def on_off(enabled: bool) -> str:
+            return f"ENABLED ({mode})" if enabled else "DISABLED"
+
+        cleanup = not self.extract_zip
+        actions = [
+            ("Extract ZIPs", on_off(True)),
+            ("Delete ZIPs", on_off(not self.leave_zip)),
+            ("Remove AppleDouble", on_off(cleanup and not self.leave_appledouble)),
+            ("Remove .DS_Store", on_off(cleanup and not self.leave_ds_store)),
+            ("Remove Thumbs.db", on_off(cleanup and not self.leave_thumbs_db)),
+            ("Remove desktop.ini", on_off(cleanup and not self.leave_desktop_ini)),
+            ("Remove @eaDir", on_off(cleanup and not self.leave_eadir)),
+            ("Remove _MACOSX / __MACOSX", on_off(self.remove_macosx)),
+            ("Send to Bin", on_off(self.send_to_bin)),
+            ("Force-Delete (including Read-Only)", on_off(self.force_readonly)),
+        ]
+        return "\n".join(current + [""] + group("Only with --apply", actions))

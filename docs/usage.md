@@ -241,6 +241,44 @@ archivist --parent-folder "C:\photos" --apply
 The console lists the active options, each action, and a count per step. The same report is appended
 to `report.log` in the processed folder by default.
 
+The settings are split into two tree-style groups. **Current Config** shows
+the parent folder, immediately followed by Mode, cleanup rules and report
+settings. **Only with --apply** lists the actions and removal policies; enabled
+actions include their execution mode so they cannot be mistaken for immediate
+deletions during a preview:
+
+```text
+Current Config
+|- Parent Folder     : C:\photos
+|- Mode              : DRY-RUN (read-only)
+|- AppleDouble Rules : ._ files <= 2048 bytes; ._ folders without visible files
+|- Log to File       : <parent-folder>/report.log
+|- Report File       : C:\photos\report.log
+
+Only with --apply
+|- Extract ZIPs                       : ENABLED (dry-run : read-only)
+|- Delete ZIPs                        : ENABLED (dry-run : read-only)
+|- Remove AppleDouble                 : ENABLED (dry-run : read-only)
+|- Remove .DS_Store                   : ENABLED (dry-run : read-only)
+|- Remove Thumbs.db                   : ENABLED (dry-run : read-only)
+|- Remove desktop.ini                 : ENABLED (dry-run : read-only)
+|- Remove @eaDir                      : ENABLED (dry-run : read-only)
+|- Remove _MACOSX / __MACOSX          : DISABLED
+|- Send to Bin                        : DISABLED
+|- Force-Delete (including Read-Only) : DISABLED
+```
+
+With `--apply`, Mode becomes `APPLY (write)` and enabled actions display
+`ENABLED (apply : write)`. `DISABLED` means the action is not selected;
+`--extract-zip` also disables the standard cleanup categories in this summary.
+Read-only refers to the collection: the report file may still be written during
+a dry run unless `--no-log-file` is set.
+**Force-Delete (including Read-Only)** is the display name for the existing
+`--force-readonly-deletion` / `--force` option. It allows eligible read-only
+items to be removed; it does not select additional cleanup categories or bypass
+archive safety checks. Force deletion and sending items to the bin appear at
+the bottom of the apply-only group, not among current read-only settings.
+
 ![Archivist completion report showing eight ZIP files found and extracted](assets/result.png)
 
 | Setting | Report destination |
