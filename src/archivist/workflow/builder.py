@@ -10,6 +10,7 @@ from .steps import (
     RemoveAppleDoubleFolders,
     RemoveEaDirFolders,
     RemoveFilesNamed,
+    RemoveMacosxFolders,
     Step,
 )
 
@@ -44,7 +45,10 @@ class WorkflowBuilder:
         )
         cleaner = MetadataCleaner(remover)
         if config.extract_zip:
-            return Workflow([ExtractArchives(extractor)], dry_run=not config.apply)
+            extraction_steps: list[Step] = [ExtractArchives(extractor)]
+            if config.remove_macosx:
+                extraction_steps.append(RemoveMacosxFolders(cleaner))
+            return Workflow(extraction_steps, dry_run=not config.apply)
 
         # (enabled, step) in run order; file steps come first so emptied ._ folders go too
         sequence: list[tuple[bool, Step]] = [
@@ -55,5 +59,6 @@ class WorkflowBuilder:
             (not config.leave_desktop_ini, RemoveFilesNamed(cleaner, "desktop.ini")),
             (not config.leave_appledouble, RemoveAppleDoubleFolders(cleaner)),
             (not config.leave_eadir, RemoveEaDirFolders(cleaner)),
+            (config.remove_macosx, RemoveMacosxFolders(cleaner)),
         ]
         return Workflow([step for enabled, step in sequence if enabled], dry_run=not config.apply)

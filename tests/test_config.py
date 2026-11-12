@@ -11,6 +11,7 @@ def test_defaults_clean_everything_and_delete_permanently():
     assert (config.leave_zip, config.leave_appledouble, config.leave_eadir) == (False, False, False)
     assert (config.leave_ds_store, config.leave_thumbs_db, config.leave_desktop_ini) == (False, False, False)
     assert (config.force_readonly, config.send_to_bin, config.apply) == (False, False, False)
+    assert config.remove_macosx is False
     assert config.appledouble_max_size == APPLEDOUBLE_MAX_SIZE
     assert config.parent_folder is None and config.log_file == ""
 
@@ -28,6 +29,7 @@ def test_from_env_reads_every_variable():
         "ARCHIVIST_LEAVE_DS_STORE": "true",
         "ARCHIVIST_LEAVE_THUMBS_DB": "true",
         "ARCHIVIST_LEAVE_DESKTOP_INI": "true",
+        "ARCHIVIST_REMOVE_MACOSX": "true",
         "ARCHIVIST_MAX_SIZE": "4096",
         "ARCHIVIST_FORCE_READONLY_DELETION": "TRUE",
         "ARCHIVIST_SEND_TO_BIN": "true",
@@ -42,6 +44,7 @@ def test_from_env_reads_every_variable():
         leave_ds_store=True,
         leave_thumbs_db=True,
         leave_desktop_ini=True,
+        remove_macosx=True,
         appledouble_max_size=4096,
         force_readonly=True,
         send_to_bin=True,
@@ -57,6 +60,11 @@ def test_dry_run_variable_is_ignored():
 def test_summary_shows_the_mode():
     assert "Mode               : dry run (nothing will be changed, use --apply" in Config().summary()
     assert "Mode               : APPLY (files will be changed)" in Config(apply=True).summary()
+
+
+def test_summary_shows_opt_in_macosx_cleanup():
+    assert "Remove _MACOSX     : disabled (also __MACOSX)" in Config().summary()
+    assert "Remove _MACOSX     : ENABLED (also __MACOSX)" in Config(remove_macosx=True).summary()
 
 
 def test_empty_variables_keep_defaults():

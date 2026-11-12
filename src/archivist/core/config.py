@@ -129,6 +129,10 @@ class Config:
         False, "--leave-desktop-ini", env="LEAVE_DESKTOP_INI",
         help="Do not remove Windows 'desktop.ini' files (they hold custom folder icons and names).",
     )
+    remove_macosx: bool = option(
+        False, "--remove-macosx", env="REMOVE_MACOSX",
+        help="Also remove '_MACOSX' and '__MACOSX' folders and all their contents recursively.",
+    )
     appledouble_max_size: int = option(
         APPLEDOUBLE_MAX_SIZE, "--max-size", env="MAX_SIZE",
         help="Max size in bytes for '._' files to be removed (default: %(default)s).",
@@ -166,6 +170,8 @@ class Config:
 
     def validate_actions(self) -> None:
         """Reject modifiers that do not have a corresponding action."""
+        if self.remove_macosx and self.image_workflow:
+            raise ValueError("--remove-macosx cannot be combined with image actions")
         if self.copy and not self.move_images:
             raise ValueError("--copy requires --move-images / --move-pictures")
         if self.destination is not None and not self.move_images:
@@ -217,5 +223,6 @@ class Config:
             f"Remove Thumbs.db   : {on_off(not self.leave_thumbs_db)}",
             f"Remove desktop.ini : {on_off(not self.leave_desktop_ini)}",
             f"Remove @eaDir      : {on_off(not self.leave_eadir)}",
+            f"Remove _MACOSX     : {on_off(self.remove_macosx)} (also __MACOSX)",
             f"Log to file        : {self.log_file_label()}",
         ])

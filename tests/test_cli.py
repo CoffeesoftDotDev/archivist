@@ -17,6 +17,26 @@ def test_flag_beats_env_variable_which_beats_default():
     assert config.leave_eadir is False
 
 
+@pytest.mark.parametrize("action", ["--list-images", "--list-pictures", "--move-images", "--move-pictures"])
+def test_macosx_cleanup_cannot_be_silently_ignored_by_image_actions(action):
+    with pytest.raises(SystemExit, match="--remove-macosx cannot be combined with image actions"):
+        cli.parse_config([action, "--remove-macosx"], environ={})
+
+
+@pytest.mark.parametrize("apply", [False, True])
+def test_macosx_cleanup_cli_previews_then_applies(tmp_path, write_file, capsys, apply):
+    content = write_file(tmp_path / "album" / "__MACOSX" / "deep" / "visible.jpg")
+    args = ["--parent-folder", str(tmp_path), "--remove-macosx", "--no-log-file"]
+    if apply:
+        args.append("--apply")
+
+    assert cli.main(args) == 0
+    assert content.exists() is not apply
+    output = capsys.readouterr().out
+    assert re.search(r"_MACOSX / __MACOSX folders removed +: 1", output)
+    assert ("Removed folder:" if apply else "Would remove folder:") in output
+
+
 def test_every_flag_maps_to_a_config_field():
     argv = [
         "--parent-folder", "photos", "--leave-zip", "--leave-appledouble", "--leave-eadir",

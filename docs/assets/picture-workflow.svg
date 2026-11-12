@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="1180" viewBox="0 0 960 1180" role="img" aria-labelledby="title description">
+  <title id="title">Picture inventory, extraction, move and copy</title>
+  <desc id="description">List, list plus extraction, and move or copy actions all begin with one filtered inventory on disk and inside ZIPs. Previews and listing-only runs stop after inventory. Applied extraction and transfer require human approval and complete extraction before optional picture transfers. Pictures retain embedded metadata and original dates. Copy and leave-zip retain original ZIPs. No metadata cleanup runs.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse"><path d="M1 1 L8 5 L1 9" fill="none" stroke="#64748b" stroke-width="1.5"/></marker>
+    <style>
+      text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; fill: #172b4d; }
+      .heading { font-size: 30px; font-weight: 750; }
+      .label { font-size: 21px; font-weight: 700; }
+      .body { font-size: 19px; }
+      .code { font-family: Consolas, monospace; font-size: 19px; }
+      .muted { fill: #475569; }
+      .line { fill: none; stroke: #64748b; stroke-width: 2; marker-end: url(#arrow); }
+      .card { fill: #fff; stroke: #cbd5e1; stroke-width: 1.5; }
+    </style>
+  </defs>
+  <rect width="960" height="1180" rx="24" fill="#f8fafc"/>
+  <rect x="28" y="28" width="8" height="63" rx="4" fill="#0f766e"/>
+  <text x="54" y="56" class="heading">02 / Find and collect pictures</text>
+  <text x="54" y="84" class="body muted">One inventory. Explicit approval before extraction or transfers.</text>
+
+  <rect x="32" y="116" width="274" height="104" rx="14" class="card"/>
+  <text x="56" y="150" class="label">LIST</text>
+  <text x="56" y="182" class="code">--list-images</text>
+  <rect x="322" y="116" width="290" height="104" rx="14" class="card"/>
+  <text x="346" y="150" class="label">LIST + EXTRACT</text>
+  <text x="346" y="182" class="code">--list-images</text>
+  <text x="346" y="208" class="code">--extract-zip</text>
+  <rect x="628" y="116" width="300" height="104" rx="14" class="card"/>
+  <text x="652" y="150" class="label">MOVE / COPY</text>
+  <text x="652" y="182" class="code">--move-images</text>
+  <text x="652" y="208" class="code">Add --copy for copies</text>
+  <path d="M169 220 V244 H480 V267" class="line"/>
+  <path d="M467 220 V244 M778 220 V244 H480" fill="none" stroke="#64748b" stroke-width="2"/>
+
+  <rect x="140" y="272" width="680" height="86" rx="14" fill="#f0fdfa" stroke="#0f766e" stroke-width="1.5"/>
+  <text x="480" y="305" text-anchor="middle" class="label">Inventory pictures on disk + inside ZIPs</text>
+  <text x="480" y="335" text-anchor="middle" class="code">--parent-folder &lt;path&gt; / --filter JPG,PNG,ARW</text>
+  <path d="M290 358 V390" class="line"/>
+  <path d="M690 358 V390" class="line"/>
+
+  <rect x="32" y="396" width="410" height="108" rx="14" class="card"/>
+  <text x="56" y="430" class="label">STOP: inventory only</text>
+  <text x="56" y="459" class="body">All previews, or LIST alone even</text>
+  <text x="56" y="485" class="body">with --apply. Collection unchanged.</text>
+
+  <rect x="474" y="396" width="454" height="108" rx="14" fill="#f0fdfa" stroke="#0f766e" stroke-width="1.5"/>
+  <text x="498" y="430" class="label">CONTINUE: --apply + approval</text>
+  <text x="498" y="459" class="body">LIST + EXTRACT or MOVE / COPY</text>
+  <text x="498" y="485" class="body">Review plan; only y / yes approves.</text>
+  <path d="M701 504 V535" class="line"/>
+
+  <rect x="474" y="540" width="454" height="112" rx="14" class="card"/>
+  <text x="498" y="574" class="label">Extract complete relevant ZIPs</text>
+  <text x="498" y="603" class="body">Nested ZIPs too, before any transfer.</text>
+  <text x="498" y="630" class="body">COPY uses private temporary storage.</text>
+  <path d="M701 652 V683" class="line"/>
+
+  <rect x="474" y="688" width="454" height="148" rx="14" class="card"/>
+  <text x="498" y="722" class="label">Transfer only for MOVE / COPY</text>
+  <text x="498" y="753" class="code">--destination &lt;path&gt;</text>
+  <text x="498" y="782" class="body">Flat folder; numbered collision names.</text>
+  <text x="498" y="811" class="body">Keep picture bytes; verify original dates.</text>
+  <path d="M701 836 V867" class="line"/>
+
+  <rect x="474" y="872" width="454" height="112" rx="14" class="card"/>
+  <text x="498" y="906" class="label">Handle original physical ZIPs</text>
+  <text x="498" y="935" class="body">Only remove after successful work.</text>
+  <text x="498" y="963" class="code">Keep: --leave-zip or --copy</text>
+  <path d="M701 984 V1010 H480 V1035" class="line"/>
+  <path d="M237 504 V1010 H480" fill="none" stroke="#64748b" stroke-width="2"/>
+
+  <rect x="230" y="1040" width="500" height="58" rx="14" class="card"/>
+  <text x="480" y="1076" text-anchor="middle" class="label">Console + pictures.log</text>
+  <text x="480" y="1132" text-anchor="middle" class="body muted">No filesystem metadata cleanup; --remove-macosx is rejected.</text>
+  <text x="480" y="1160" text-anchor="middle" class="body muted">Aliases: --list-pictures / --move-pictures</text>
+</svg>

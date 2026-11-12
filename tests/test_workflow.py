@@ -27,6 +27,8 @@ def step_names(config: Config) -> list[str]:
     ("config", "expected"),
     [
         (Config(), EVERY_STEP),
+        (Config(remove_macosx=True), [*EVERY_STEP, "RemoveMacosxFolders"]),
+        (Config(extract_zip=True, remove_macosx=True), ["ExtractArchives", "RemoveMacosxFolders"]),
         (
             Config(leave_appledouble=True),
             ["ExtractArchives", ".DS_Store", "Thumbs.db", "desktop.ini", "RemoveEaDirFolders"],
@@ -146,3 +148,30 @@ def test_disabled_steps_leave_files_alone_and_stay_out_of_the_report(photos, lis
     }
     kept = {"album.zip", "@eaDir", "._empty/Thumbs.db", "desktop.ini", "album/._a.jpg", "album/.DS_Store"}
     assert kept <= set(listing(photos))
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+@pytest.mark.parametrize("extract_zip", [False, True])
+def test_macosx_cleanup_is_opt_in_and_runs_after_extraction(tmp_path, make_zip, write_file, enabled, extract_zip):
+    existing = write_file(tmp_path / "_MACOSX" / "deep" / "visible.jpg")
+    make_zip(tmp_path / "album.zip", {"photo.jpg": "photo", "__MACOSX/deep/content": "metadata"})
+
+    report = run(Config(apply=True, extract_zip=extract_zip, remove_macosx=enabled), tmp_path)
+
+    assert existing.exists() is not enabled
+    assert (tmp_path / "album" / "__MACOSX" / "deep" / "content").exists() is not enabled
+    assert (tmp_path / "album" / "photo.jpg").read_text() == "photo"
+    if enabled:
+        assert report["_MACOSX / __MACOSX folders removed"] == 2
+    else:
+        assert "_MACOSX / __MACOSX folders removed" not in report
+
+
+def test_macosx_workflow_dry_run_changes_nothing(tmp_path, write_file, listing):
+    write_file(tmp_path / "__MACOSX" / "_MACOSX" / "visible.jpg")
+    before = listing(tmp_path)
+
+    report = run(Config(remove_macosx=True), tmp_path)
+
+    assert report["_MACOSX / __MACOSX folders removed"] == 1
+    assert listing(tmp_path) == before
