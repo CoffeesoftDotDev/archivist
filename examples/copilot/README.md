@@ -18,17 +18,18 @@ It uses the supported Agent Plugins 1.0 format: root `plugin.json`, root
 
 The official format reference is
 [GitHub's CLI plugin reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference).
-The authoritative CLI documentation tool returned help; its bundled README was
-unavailable. Help confirmed `--plugin-dir`; an authenticated Copilot/model
-integration session has not been claimed as tested.
+Help confirmed `--plugin-dir`; an authenticated Copilot/model integration
+session has not been claimed as tested. The
+[published MCP guide](https://coffeesoftdotdev.github.io/archivist/mcp.html#local-copilot-example)
+also includes the manifests, session setup and sample request inline.
 
 ## Configure and load without installation
 
 From the repository root in PowerShell:
 
 ```powershell
-# Deliberate placeholder: replace after review of a commit containing the server.
-$env:ARCHIVIST_REVIEWED_COMMIT = "REPLACE_WITH_REVIEWED_FULL_40_HEX_SHA"
+# Merged implementation from PR #30; tested on Windows and Linux.
+$env:ARCHIVIST_REVIEWED_COMMIT = "d92909fccb11624c490781df2d6a4d3eac719658"
 $env:ARCHIVIST_SOURCE_ROOT = "C:\photos"
 $env:ARCHIVIST_DESTINATION_ROOT = "D:\collections"
 copilot --plugin-dir .\examples\copilot
@@ -41,6 +42,12 @@ directory on Windows and Linux. Environment variables are inherited by the
 launcher; this example does not depend on arbitrary placeholder expansion in
 MCP JSON. On Linux set the same three variables using your shell and supply
 native absolute paths; the Node launcher uses the current host's path rules.
+
+The sample pin is the public merge commit from
+[PR #30](https://github.com/CoffeesoftDotDev/archivist/pull/30), not a mutable
+branch or a released v0.3 package. Review the selected code and root policy
+before using your own collections. To use a later revision, select and verify
+its full immutable SHA explicitly.
 
 The launcher rejects missing/relative roots and non-full-SHA pins, then invokes:
 
@@ -110,8 +117,11 @@ authenticated agent/skill/tool invocation. The strict Sphinx 8.2.3 HTML build
 also passed.
 
 SHA validation rejects trailing newlines, and root validation rejects Windows
-drive-relative/root-relative paths. Authenticated integration and hosted smoke
-remain pending; rerun them with a reviewed accessible server commit before
-release acceptance. See
-[MCP acceptance gates](../../docs/mcp.md#acceptance-and-release-gates) for pending
-hosted Windows/Linux smoke, actual Copilot integration and human release approval.
+drive-relative/root-relative paths.
+[Hosted MCP CI](https://github.com/CoffeesoftDotDev/archivist/actions/runs/43199321092)
+passed SDK contracts and clean immutable-source startup on Windows/Linux with
+Python 3.10/3.13 against the sample merge commit. This does not prove an
+authenticated Copilot agent/skill/tool invocation.
+See [MCP acceptance gates](../../docs/mcp.md#acceptance-and-release-gates)
+for the hosted evidence and remaining actual Copilot integration and human
+release approval. Neither this example nor passing server CI approves a release.
