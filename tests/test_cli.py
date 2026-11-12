@@ -23,10 +23,44 @@ def test_macosx_cleanup_cannot_be_silently_ignored_by_image_actions(action):
         cli.parse_config([action, "--remove-macosx"], environ={})
 
 
+@pytest.mark.parametrize(
+    ("args", "env", "enabled"),
+    [
+        ([], {}, True),
+        (["--leave-macosx"], {}, False),
+        ([], {"ARCHIVIST_REMOVE_MACOSX": "false"}, False),
+        (["--remove-macosx"], {"ARCHIVIST_REMOVE_MACOSX": "false"}, True),
+        (["--leave-macosx"], {"ARCHIVIST_REMOVE_MACOSX": "true"}, False),
+    ],
+)
+def test_macosx_cleanup_defaults_and_override_precedence(args, env, enabled):
+    assert cli.parse_config(args, environ=env).remove_macosx is enabled
+
+
+@pytest.mark.parametrize("env", [{}, {"ARCHIVIST_REMOVE_MACOSX": "false"}])
+@pytest.mark.parametrize("action", ["--list-images", "--list-pictures", "--move-images", "--move-pictures"])
+def test_default_macosx_cleanup_does_not_block_image_actions(env, action):
+    assert cli.parse_config([action], environ=env).image_workflow
+
+
+def test_explicit_macosx_environment_enable_is_rejected_with_image_actions():
+    with pytest.raises(SystemExit, match="--remove-macosx cannot be combined with image actions"):
+        cli.parse_config(["--list-images"], environ={"ARCHIVIST_REMOVE_MACOSX": "true"})
+
+
+@pytest.mark.parametrize("env", [{}, {"ARCHIVIST_REMOVE_MACOSX": "true"}])
+def test_macosx_enable_and_disable_flags_are_mutually_exclusive(env):
+    with pytest.raises(SystemExit):
+        cli.parse_config(["--remove-macosx", "--leave-macosx"], environ=env)
+
+
 @pytest.mark.parametrize("apply", [False, True])
-def test_macosx_cleanup_cli_previews_then_applies(tmp_path, write_file, capsys, apply):
+@pytest.mark.parametrize("extract_zip", [False, True])
+def test_macosx_cleanup_cli_previews_then_applies_by_default(tmp_path, write_file, capsys, apply, extract_zip):
     content = write_file(tmp_path / "album" / "__MACOSX" / "deep" / "visible.jpg")
-    args = ["--parent-folder", str(tmp_path), "--remove-macosx", "--no-log-file"]
+    args = ["--parent-folder", str(tmp_path), "--no-log-file"]
+    if extract_zip:
+        args.append("--extract-zip")
     if apply:
         args.append("--apply")
 
@@ -35,6 +69,14 @@ def test_macosx_cleanup_cli_previews_then_applies(tmp_path, write_file, capsys, 
     output = capsys.readouterr().out
     assert re.search(r"_MACOSX / __MACOSX folders removed +: 1", output)
     assert ("Removed folder:" if apply else "Would remove folder:") in output
+
+
+def test_macosx_cleanup_cli_opt_out_preserves_contents(tmp_path, write_file):
+    content = write_file(tmp_path / "__MACOSX" / "deep" / "visible.jpg")
+    assert cli.main([
+        "--parent-folder", str(tmp_path), "--apply", "--leave-macosx", "--no-log-file",
+    ]) == 0
+    assert content.read_text() == "x"
 
 
 def test_every_flag_maps_to_a_config_field():

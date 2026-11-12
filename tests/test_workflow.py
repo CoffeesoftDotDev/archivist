@@ -11,6 +11,7 @@ EVERY_STEP = [
     "desktop.ini",
     "RemoveAppleDoubleFolders",
     "RemoveEaDirFolders",
+    "RemoveMacosxFolders",
 ]
 
 
@@ -27,15 +28,16 @@ def step_names(config: Config) -> list[str]:
     ("config", "expected"),
     [
         (Config(), EVERY_STEP),
-        (Config(remove_macosx=True), [*EVERY_STEP, "RemoveMacosxFolders"]),
+        (Config(remove_macosx=False), EVERY_STEP[:-1]),
         (Config(extract_zip=True, remove_macosx=True), ["ExtractArchives", "RemoveMacosxFolders"]),
         (
             Config(leave_appledouble=True),
-            ["ExtractArchives", ".DS_Store", "Thumbs.db", "desktop.ini", "RemoveEaDirFolders"],
+            ["ExtractArchives", ".DS_Store", "Thumbs.db", "desktop.ini", "RemoveEaDirFolders", "RemoveMacosxFolders"],
         ),
         (
             Config(leave_eadir=True, leave_thumbs_db=True),
-            ["ExtractArchives", "RemoveAppleDoubleFiles", ".DS_Store", "desktop.ini", "RemoveAppleDoubleFolders"],
+            ["ExtractArchives", "RemoveAppleDoubleFiles", ".DS_Store", "desktop.ini", "RemoveAppleDoubleFolders",
+             "RemoveMacosxFolders"],
         ),
         (
             Config(
@@ -44,6 +46,7 @@ def step_names(config: Config) -> list[str]:
                 leave_ds_store=True,
                 leave_thumbs_db=True,
                 leave_desktop_ini=True,
+                remove_macosx=False,
             ),
             ["ExtractArchives"],
         ),
@@ -104,6 +107,7 @@ def test_run_extracts_nested_zips_and_cleans_metadata(photos, listing):
         "desktop.ini files removed": 1,
         "._ folders removed": 1,
         "@eaDir folders removed": 1,
+        "_MACOSX / __MACOSX folders removed": 0,
     }
     assert listing(photos) == ["album", "album/a.jpg", "album/inner", "album/inner/b.jpg"]
 
@@ -124,6 +128,7 @@ def test_default_run_is_a_dry_run_that_changes_nothing(photos, listing, logs):
         "desktop.ini files removed": 1,
         "._ folders removed": 0,
         "@eaDir folders removed": 1,
+        "_MACOSX / __MACOSX folders removed": 0,
     }
     assert "Dry run completed: nothing was changed" in logs.text
     assert "Run again with --apply to make these changes." in logs.text
@@ -138,6 +143,7 @@ def test_disabled_steps_leave_files_alone_and_stay_out_of_the_report(photos, lis
         leave_ds_store=True,
         leave_thumbs_db=True,
         leave_desktop_ini=True,
+        remove_macosx=False,
     )
     report = run(config, photos)
     assert report == {
@@ -152,11 +158,12 @@ def test_disabled_steps_leave_files_alone_and_stay_out_of_the_report(photos, lis
 
 @pytest.mark.parametrize("enabled", [False, True])
 @pytest.mark.parametrize("extract_zip", [False, True])
-def test_macosx_cleanup_is_opt_in_and_runs_after_extraction(tmp_path, make_zip, write_file, enabled, extract_zip):
+def test_macosx_cleanup_can_be_disabled_and_runs_after_extraction(tmp_path, make_zip, write_file, enabled, extract_zip):
     existing = write_file(tmp_path / "_MACOSX" / "deep" / "visible.jpg")
     make_zip(tmp_path / "album.zip", {"photo.jpg": "photo", "__MACOSX/deep/content": "metadata"})
 
-    report = run(Config(apply=True, extract_zip=extract_zip, remove_macosx=enabled), tmp_path)
+    options = {} if enabled else {"remove_macosx": False}
+    report = run(Config(apply=True, extract_zip=extract_zip, **options), tmp_path)
 
     assert existing.exists() is not enabled
     assert (tmp_path / "album" / "__MACOSX" / "deep" / "content").exists() is not enabled
@@ -171,7 +178,7 @@ def test_macosx_workflow_dry_run_changes_nothing(tmp_path, write_file, listing):
     write_file(tmp_path / "__MACOSX" / "_MACOSX" / "visible.jpg")
     before = listing(tmp_path)
 
-    report = run(Config(remove_macosx=True), tmp_path)
+    report = run(Config(), tmp_path)
 
     assert report["_MACOSX / __MACOSX folders removed"] == 1
     assert listing(tmp_path) == before

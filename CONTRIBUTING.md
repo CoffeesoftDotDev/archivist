@@ -114,7 +114,7 @@ Fields are declared in `--help` order, and an empty or unset variable always kee
 Two rules keep options consistent:
 
 * Name each field after its flag and variable, and give it the flag's default. A `--leave-x` flag sets `leave_x`, which defaults to `False`; code that needs the positive meaning uses `not config.leave_x`.
-* An option that doesn't fit one of the types above is declared without flags and gets hand-written ones in `build_parser`, plus a `parse=` converter if its variable needs one. There are three today: `--apply` with the hidden `--dry-run`, the log file (`--log-file [PATH]` / `--no-log-file`) with `parse_log_file()`, and `--filter` with `parse_image_filter()`.
+* An option that doesn't fit one of the types above is declared without flags and gets hand-written ones in `build_parser`, plus a `parse=` converter if its variable needs one. There are four today: `--apply` with the hidden `--dry-run`, default-enabled MACOSX cleanup (`--remove-macosx` / `--leave-macosx`), the log file (`--log-file [PATH]` / `--no-log-file`) with `parse_log_file()`, and `--filter` with `parse_image_filter()`.
 
 ## Adding a step
 

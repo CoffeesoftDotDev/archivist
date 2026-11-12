@@ -61,11 +61,14 @@ Archivist then removes, in this order:
 
 A file counts as hidden when its name starts with a dot or, on Windows, when it has the hidden or system attribute. Each cleanup step can be turned off with its `--leave-*` option.
 
-Pass `--remove-macosx` to additionally remove `_MACOSX` and `__MACOSX` folders
-and all their contents recursively below the parent folder, after extraction and
-the other cleanup steps. This is off by default, skips links/junctions, and honors
-dry runs, `--send-to-bin` and read-only protection (`--force` to override).
-It also works with `--extract-zip`, but cannot be combined with image actions.
+`_MACOSX` and `__MACOSX` folders and **all their contents** are removed
+recursively by default below the parent folder, after extraction and the other
+cleanup steps. Pass `--leave-macosx` or set `ARCHIVIST_REMOVE_MACOSX=false` to
+preserve them; `--remove-macosx` remains available to explicitly enable removal.
+This skips links/junctions and honors dry runs, `--send-to-bin` and read-only
+protection (`--force` to override). It also applies with `--extract-zip`.
+Image actions never run this cleanup; explicitly enabling it with image actions
+is rejected.
 
 ### Existing folders
 
@@ -183,7 +186,7 @@ If you leave out `--parent-folder`, Archivist asks for the folder in the termina
 | `--parent-folder <path>`               | prompt                       | Folder to process. An empty value counts as not given                                        |
 | `--list-images`, `--list-pictures` | off | Inventory pictures on disk and in ZIPs |
 | `--move-images`, `--move-pictures` | off | Inventory, approve, extract, then transfer selected pictures |
-| `--extract-zip` | off | Explicit extraction; no implicit metadata cleanup |
+| `--extract-zip` | off | Skip standard cleanup; MACOSX cleanup remains enabled unless `--leave-macosx` |
 | `--destination <path>` | none | Flat picture destination; required for applying a transfer |
 | `--copy` | off | Copy instead of moving; requires a move-images/pictures action |
 | `--filter <extensions>` | image catalog | Comma-separated, case-insensitive image extensions |
@@ -193,7 +196,8 @@ If you leave out `--parent-folder`, Archivist asks for the folder in the termina
 | `--leave-ds-store`                     | off                          | Keep `.DS_Store` files                                                                       |
 | `--leave-thumbs-db`                    | off                          | Keep Windows `Thumbs.db` thumbnail caches                                                    |
 | `--leave-desktop-ini`                  | off                          | Keep Windows `desktop.ini` files, which hold custom folder icons and names                   |
-| `--remove-macosx` | off | Recursively remove `_MACOSX` and `__MACOSX` folders, including all contents |
+| `--remove-macosx` | on | Recursively remove `_MACOSX` and `__MACOSX` folders, including all contents; extraction/cleanup only |
+| `--leave-macosx` | off | Keep `_MACOSX` and `__MACOSX` folders and their contents |
 | `--max-size <bytes>`                   | `2048`                       | Largest `._*` file to remove                                                                 |
 | `--force-readonly-deletion`, `--force` | off                          | Clear the read-only flag and delete read-only items, which are skipped otherwise             |
 | `--send-to-bin`                        | off                          | Send removed items to the Recycle Bin or Trash instead of deleting them permanently          |
@@ -262,13 +266,13 @@ archivist --parent-folder "C:\photos" --apply --leave-zip
 archivist --parent-folder "C:\photos" --apply --leave-eadir
 
 # Only extract ZIPs, no cleanup
-archivist --parent-folder "C:\photos" --apply --leave-appledouble --leave-eadir --leave-ds-store --leave-thumbs-db --leave-desktop-ini
+archivist --parent-folder "C:\photos" --apply --extract-zip --leave-macosx
 
 # Remove ._ files up to 4 KB, including read-only ones
 archivist --parent-folder "C:\photos" --apply --max-size 4096 --force
 
-# Also remove macOS archive metadata folders and all their contents
-archivist --parent-folder "C:\photos" --apply --remove-macosx
+# Keep macOS archive metadata folders instead of removing them by default
+archivist --parent-folder "C:\photos" --apply --leave-macosx
 
 # Write the report elsewhere, or not at all
 archivist --parent-folder "C:\photos" --log-file "D:\logs\photos-2026.log"
@@ -294,7 +298,7 @@ Every option can also be set with an `ARCHIVIST_*` environment variable. A comma
 | `ARCHIVIST_LEAVE_DS_STORE`          | `--leave-ds-store`             | `false`                                                                        |
 | `ARCHIVIST_LEAVE_THUMBS_DB`         | `--leave-thumbs-db`            | `false`                                                                        |
 | `ARCHIVIST_LEAVE_DESKTOP_INI`       | `--leave-desktop-ini`          | `false`                                                                        |
-| `ARCHIVIST_REMOVE_MACOSX` | `--remove-macosx` | `false` |
+| `ARCHIVIST_REMOVE_MACOSX` | `--remove-macosx` / `--leave-macosx` | `true` |
 | `ARCHIVIST_MAX_SIZE`                | `--max-size`                   | `2048`                                                                         |
 | `ARCHIVIST_FORCE_READONLY_DELETION` | `--force`                      | `false`                                                                        |
 | `ARCHIVIST_SEND_TO_BIN`             | `--send-to-bin`                | `false`                                                                        |

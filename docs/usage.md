@@ -73,7 +73,8 @@ replace approval; `--dry-run` wins over `ARCHIVIST_APPLY=true`.
 
 Listing alone stays read-only with `--apply`. Listing combined with
 `--extract-zip --apply` follows **list -> approve -> extract**, without transfers.
-Explicit extraction alone uses legacy extraction behavior without cleanup.
+Explicit extraction alone skips standard cleanup, but still removes MACOSX
+trees by default. Add `--leave-macosx` for extraction without any cleanup.
 
 ### Destinations and collision names
 
@@ -194,21 +195,26 @@ After extraction, Archivist removes these items in order:
 
 Use the matching `--leave-*` option to preserve any category.
 
-To additionally remove `_MACOSX` and the standard `__MACOSX` archive metadata
-folders, pass `--remove-macosx`. It recursively removes matching folders below
+`_MACOSX` and the standard `__MACOSX` archive metadata folders are removed by
+default in the extraction/cleanup workflow. This recursively removes matching folders below
 the parent folder and **all their contents**, including visible files and nested
 directories. Nested matching folders count once as part of the outer tree.
 Other names and files named `_MACOSX` or `__MACOSX` are kept. Links and junctions
-are not followed. This optional step runs last, also with `--extract-zip`, so it
-includes folders created by extraction. It cannot be combined with image actions.
+are not followed. This step runs last, also with `--extract-zip`, so it
+includes folders created by extraction. Pass `--leave-macosx` or set
+`ARCHIVIST_REMOVE_MACOSX=false` to preserve them. Image actions do not run this
+default cleanup; explicitly enabling it with image actions is rejected.
 
 ```powershell
 # Preview first; add --apply to remove the folders
-archivist --parent-folder "C:\photos" --remove-macosx
-archivist --parent-folder "C:\photos" --remove-macosx --apply
+archivist --parent-folder "C:\photos"
+archivist --parent-folder "C:\photos" --apply
+# Opt out of MACOSX cleanup
+archivist --parent-folder "C:\photos" --leave-macosx --apply
 ```
 
-`ARCHIVIST_REMOVE_MACOSX=true` enables the same option. `--send-to-bin` sends
+`--remove-macosx` explicitly enables removal even if the environment disables it;
+`--leave-macosx` overrides an enabling environment value. `--send-to-bin` sends
 each selected tree to the Recycle Bin or Trash instead of deleting it permanently.
 Trees containing read-only items are kept unless `--force` is passed.
 
@@ -268,7 +274,7 @@ Only with --apply
 |- Remove Thumbs.db                   : ENABLED (dry-run : read-only)
 |- Remove desktop.ini                 : ENABLED (dry-run : read-only)
 |- Remove @eaDir                      : ENABLED (dry-run : read-only)
-|- Remove _MACOSX / __MACOSX          : DISABLED
+|- Remove _MACOSX / __MACOSX          : ENABLED (dry-run : read-only)
 |- Send to Bin                        : DISABLED
 |- Force-Delete (including Read-Only) : DISABLED
 ```
@@ -303,7 +309,7 @@ archivist --parent-folder "C:\photos" --apply --send-to-bin
 archivist --parent-folder "C:\photos" --apply --leave-zip
 
 # Extract without metadata cleanup
-archivist --parent-folder "C:\photos" --apply --leave-appledouble --leave-eadir --leave-ds-store --leave-thumbs-db --leave-desktop-ini
+archivist --parent-folder "C:\photos" --apply --extract-zip --leave-macosx
 
 # Remove AppleDouble files up to 4 KB, including read-only files
 archivist --parent-folder "C:\photos" --apply --max-size 4096 --force
