@@ -322,10 +322,18 @@ packaging/CLI checks with nine SDK-dependent skips, including actionable
 missing-extra diagnostics. Installed-console MCP probes also passed on both
 Python versions.
 
-Run the opt-in immutable-source smoke against the actual implementation commit,
-not a pre-implementation baseline. Retain its exact SHA and output with review
-evidence; a local `--git-url` checkout validates that committed source but does
-not prove public availability or hosted Linux startup. Hosted Windows/Linux
+Clean isolated `uvx` CLI and MCP probes passed on Windows with Python 3.10.21
+and 3.13.15 against local source commit
+`b8d17162cb97f09db329b1fa790e8423366215d6`. The CLI environments contained no
+MCP SDK; the MCP environments used SDK 1.30.0 and reported protocol 2025-11-25.
+They discovered exactly the two advertised tools, paged disk/ZIP
+inventory and previews, rejected an `apply` field and left fixture snapshots
+unchanged.
+
+Run the opt-in immutable-source smoke against the intended implementation
+commit, not a pre-implementation baseline. Retain its exact SHA and output with
+review evidence; this local `--git-url` result validates committed source but
+does not prove public availability or hosted Linux startup. Hosted Windows/Linux
 jobs, authenticated Copilot invocation and the human release decision remain
 external gates.
 
