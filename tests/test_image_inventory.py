@@ -171,7 +171,13 @@ def test_explicit_stage_composition_and_copy_prerequisites(tmp_path):
         "ListImages", "ConfirmImagePlan", "ExtractImageArchives", "TransferImages",
     ]
     assert [type(step).__name__ for step in WorkflowBuilder(Config(list_images=True, extract_zip=True)).build().steps] == ["ListImages"]
-    assert [type(step).__name__ for step in WorkflowBuilder(Config(extract_zip=True)).build().steps] == ["ExtractArchives"]
+    assert [type(step).__name__ for step in WorkflowBuilder(Config(extract_zip=True)).build().steps] == [
+        "ExtractArchives", "RemoveMacosxFolders",
+    ]
+    assert [
+        type(step).__name__
+        for step in WorkflowBuilder(Config(extract_zip=True, remove_macosx=False)).build().steps
+    ] == ["ExtractArchives"]
 
 
 @pytest.mark.parametrize("actions", list(permutations(["--list-images", "--extract-zip", "--move-pictures", "--copy"])))

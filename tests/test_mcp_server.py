@@ -3,10 +3,10 @@ import builtins
 import json
 import threading
 
-import anyio
 import pytest
 
 pytest.importorskip("mcp")
+import anyio
 from jsonschema import Draft202012Validator
 from mcp.types import CallToolRequest, ListToolsRequest
 
