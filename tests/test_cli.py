@@ -155,6 +155,46 @@ def test_a_run_without_apply_changes_nothing(tmp_path, make_zip, listing, capsys
     assert "Run again with --apply to make these changes." in output
 
 
+@pytest.mark.parametrize("apply", [False, True])
+def test_config_report_shows_mode_before_contextual_action_statuses(tmp_path, capsys, apply):
+    args = ["--parent-folder", str(tmp_path)]
+    if apply:
+        args.append("--apply")
+
+    assert cli.main(args) == 0
+
+    mode = "apply : write" if apply else "dry-run : read-only"
+    mode_label = "APPLY (write)" if apply else "DRY-RUN (read-only)"
+    for output in (capsys.readouterr().out, (tmp_path / "report.log").read_text(encoding="utf-8")):
+        lines = [
+            re.sub(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[[A-Z ]+\] ", "", line)
+            for line in output.splitlines()
+        ]
+        start = lines.index("Current Config")
+        apply_group = lines.index("Only with --apply")
+        assert lines[start + 1].startswith("|- Parent Folder")
+        assert lines[start + 1].endswith(f" : {tmp_path.resolve()}")
+        assert lines[start + 2].startswith("|- Mode")
+        assert lines[start + 2].endswith(f" : {mode_label}")
+        assert any(line.startswith("|- Report File") for line in lines[start:apply_group])
+        assert re.search(rf"\|- Delete ZIPs +: ENABLED \({mode}\)", output)
+        assert re.search(rf"\|- Remove \.DS_Store +: ENABLED \({mode}\)", output)
+        assert "|- Force-Delete (including Read-Only) : DISABLED" in output
+        assert "Read-only deletion" not in output
+
+
+def test_config_report_shows_prompted_parent_in_current_settings(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr("archivist.cli.entrypoint.is_interactive", lambda: True)
+    monkeypatch.setattr("builtins.input", lambda question: str(tmp_path))
+
+    assert cli.main(["--no-log-file"]) == 0
+
+    output = capsys.readouterr().out
+    assert re.search(rf"\|- Parent Folder +: {re.escape(str(tmp_path.resolve()))}", output)
+    assert "(prompt)" not in output
+    assert "Report File" not in output
+
+
 def test_leftover_dry_run_variable_is_ignored_with_a_warning(tmp_path, make_zip, monkeypatch, capsys):
     zip_path = make_zip(tmp_path / "photos.zip", {"a.jpg": "x"})
     monkeypatch.setenv("ARCHIVIST_DRY_RUN", "false")  # used to mean "change files"

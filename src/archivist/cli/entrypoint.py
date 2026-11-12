@@ -68,11 +68,8 @@ def _run(argv: list[str] | None) -> int:
     log.info("======================")
     log.info("Archivist run started")
     log.info("======================")
-    log.info(f"Parent folder      : {root.resolve()}")
-    for line in config.summary().splitlines()[1:]:  # skip the "Parent folder" line
+    for line in config.summary(parent_folder=root.resolve(), report_file=log_path).splitlines():
         log.info(line)
-    if log_path:
-        log.info(f"Report file        : {log_path}")
     for note in legacy_notes(argv):
         log.warning(note)
 
