@@ -8,6 +8,11 @@ description: Archivist command-line options and environment variables
 A command-line option overrides its environment variable, which overrides the built-in default.
 Unset and empty environment variables preserve the default.
 
+These are options for the existing `archivist` CLI. The separate
+[`archivist-mcp` adapter](mcp.md#operator-configuration) uses explicit startup
+root allowlists and bounded-read limits, not CLI apply or logging settings.
+MCP tools cannot change that policy or execute an operation.
+
 ## Command-line options
 
 | Option | Default | Purpose |
@@ -15,7 +20,7 @@ Unset and empty environment variables preserve the default.
 | `--parent-folder <path>` | Prompt | Folder to process |
 | `--list-images`, `--list-pictures` | Off | List image files and ZIP entries |
 | `--move-images`, `--move-pictures` | Off | List, approve, extract, then transfer pictures |
-| `--extract-zip` | Off | Explicit extraction without implicit cleanup |
+| `--extract-zip` | Off | Skip standard cleanup; MACOSX cleanup remains enabled unless `--leave-macosx` |
 | `--destination <path>` | Unset | Flat, source-disjoint transfer destination; relative to current directory |
 | `--copy` | Off | Copy rather than move; requires a picture-transfer action |
 | `--filter <extensions>` | Image catalog | Comma-separated case-insensitive image extensions |
@@ -25,7 +30,8 @@ Unset and empty environment variables preserve the default.
 | `--leave-ds-store` | Off | Keep `.DS_Store` files |
 | `--leave-thumbs-db` | Off | Keep Windows `Thumbs.db` files |
 | `--leave-desktop-ini` | Off | Keep Windows `desktop.ini` files |
-| `--remove-macosx` | Off | Recursively remove `_MACOSX` and `__MACOSX` folders and all contents; not available with image actions |
+| `--remove-macosx` | On | Recursively remove `_MACOSX` and `__MACOSX` folders and all contents; extraction/cleanup only |
+| `--leave-macosx` | Off | Keep `_MACOSX` and `__MACOSX` folders and their contents |
 | `--max-size <bytes>` | `2048` | Largest AppleDouble file to remove |
 | `--force-readonly-deletion`, `--force` | Off | Clear read-only flags before removal |
 | `--send-to-bin` | Off | Use the Recycle Bin or Trash |
@@ -51,7 +57,7 @@ Unset and empty environment variables preserve the default.
 | `ARCHIVIST_LEAVE_DS_STORE` | `--leave-ds-store` | `false` |
 | `ARCHIVIST_LEAVE_THUMBS_DB` | `--leave-thumbs-db` | `false` |
 | `ARCHIVIST_LEAVE_DESKTOP_INI` | `--leave-desktop-ini` | `false` |
-| `ARCHIVIST_REMOVE_MACOSX` | `--remove-macosx` | `false` |
+| `ARCHIVIST_REMOVE_MACOSX` | `--remove-macosx` / `--leave-macosx` | `true` |
 | `ARCHIVIST_MAX_SIZE` | `--max-size` | `2048` |
 | `ARCHIVIST_FORCE_READONLY_DELETION` | `--force` | `false` |
 | `ARCHIVIST_SEND_TO_BIN` | `--send-to-bin` | `false` |

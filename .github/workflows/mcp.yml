@@ -1,0 +1,57 @@
+name: Read-only MCP
+
+on:
+  push:
+    branches: [main, feat/mcp-stdio-v03]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sdk:
+    name: MCP SDK (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Optional SDK and bounded adapter contracts
+        run: >-
+          uv run --locked --extra mcp pytest
+          tests/test_mcp_server.py tests/test_mcp_stdio.py tests/test_mcp_packaging.py
+          tests/test_image_access.py tests/test_image_api.py
+
+  clean-startup:
+    name: Clean uvx (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: SDK-free CLI and SDK stdio from the reviewed immutable Git source
+        env:
+          REVIEWED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python scripts/mcp_smoke.py
+          --commit "${{ env.REVIEWED_SHA }}"
+          --python "${{ matrix.python }}"

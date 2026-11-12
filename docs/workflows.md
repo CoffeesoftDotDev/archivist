@@ -31,7 +31,7 @@ Use this workflow to unpack a folder tree in place, optionally removing the
 housekeeping files that operating systems leave behind.
 
 :::{figure} assets/extraction-workflow.svg
-:alt: Extraction workflow: preview by default; apply extracts ZIPs, runs standard cleanup unless extract-zip is selected, optionally removes MACOSX trees, then writes report.log.
+:alt: Extraction workflow: preview by default; apply extracts ZIPs, runs standard cleanup unless extract-zip is selected, removes MACOSX trees unless leave-macosx is selected, then writes report.log.
 :width: 100%
 
 Extraction and cleanup. The branches show which steps your options enable;
@@ -47,7 +47,7 @@ without apply, the workflow reports planned work instead of changing files.
 | Extract ZIPs | Extract beside each ZIP; process nested ZIPs, up to ten levels; restore ZIP modification timestamps | `--leave-zip` keeps original ZIPs |
 | Standard cleanup | Remove small AppleDouble files, `.DS_Store`, `Thumbs.db`, `desktop.ini`, empty-of-visible-content `._*` folders, then `@eaDir` folders | `--leave-appledouble`, `--leave-ds-store`, `--leave-thumbs-db`, `--leave-desktop-ini`, `--leave-eadir`; `--max-size <bytes>` changes the AppleDouble file limit from 2048 |
 | Skip standard cleanup | Select extraction without the standard cleanup steps | `--extract-zip` |
-| Optional final cleanup | Remove `_MACOSX` and `__MACOSX` folders and **all their contents** recursively, including visible files | `--remove-macosx`; off by default, also works with `--extract-zip` |
+| Final cleanup | Remove `_MACOSX` and `__MACOSX` folders and **all their contents** recursively, including visible files | Enabled by default, also with `--extract-zip`; `--leave-macosx` disables it; `--remove-macosx` explicitly enables it |
 | Removal policy | Delete permanently by default; protect read-only items unless forced | `--send-to-bin`; `--force-readonly-deletion` / `--force` |
 | Report | Console plus `<parent-folder>\report.log` by default | `--log-file [path]`; `--no-log-file` |
 
@@ -63,13 +63,13 @@ archivist --parent-folder "C:\photos"
 archivist --parent-folder "C:\photos" --apply --send-to-bin
 
 # Extract only; keep the original ZIPs
-archivist --parent-folder "C:\photos" --extract-zip --leave-zip --apply
+archivist --parent-folder "C:\photos" --extract-zip --leave-zip --leave-macosx --apply
 
 # Extract and remove MACOSX trees, without the other cleanup categories
-archivist --parent-folder "C:\photos" --extract-zip --remove-macosx --apply
+archivist --parent-folder "C:\photos" --extract-zip --apply
 ```
 
-`--remove-macosx` is an additional cleanup step, **not a cleanup-only mode**:
+MACOSX removal is a default final cleanup step, **not a cleanup-only mode**:
 ZIP extraction still runs. It skips filesystem links/junctions, respects
 read-only protection, and counts a nested matching folder as part of its outer
 tree rather than counting it twice.
@@ -129,7 +129,8 @@ archivist --parent-folder "C:\photos" --move-pictures --copy --destination "D:\c
 :::{note}
 Image actions do not run filesystem metadata cleanup. `--leave-*` cleanup
 switches and `--max-size` do not add cleanup to this workflow; `--leave-zip`
-still controls ZIP retention. `--remove-macosx` is explicitly rejected with
+still controls ZIP retention. Default MACOSX cleanup does not apply here;
+explicit `--remove-macosx` or `ARCHIVIST_REMOVE_MACOSX=true` is rejected with
 image actions rather than silently ignored. Copy mode also rejects `--force`
 and `--send-to-bin` because it preserves originals.
 :::
@@ -141,7 +142,7 @@ These are different kinds of metadata:
 | Kind | Examples | Extraction and cleanup | Picture workflow |
 |---|---|---|---|
 | Operating-system artifacts | `._photo.jpg`, `.DS_Store`, `Thumbs.db`, `desktop.ini`, `@eaDir` | Remove eligible items unless the category is disabled | No cleanup; known AppleDouble and `@eaDir` artifacts are excluded from picture selection |
-| macOS archive metadata trees | `_MACOSX`, `__MACOSX` | Remove whole trees only with `--remove-macosx` | `--remove-macosx` is not supported |
+| macOS archive metadata trees | `_MACOSX`, `__MACOSX` | Remove whole trees by default; preserve with `--leave-macosx` | No cleanup; explicit `--remove-macosx` is not supported |
 | Information embedded in picture bytes | EXIF date taken, camera settings, GPS if present | Cleanup does not strip embedded metadata from retained pictures | Move/copy preserves picture bytes, including embedded metadata |
 | Filesystem dates | Modification and available creation/birth time | ZIP extraction retains its existing modification-time behavior | Capture, restore and verify original dates before deleting sources |
 

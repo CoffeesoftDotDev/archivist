@@ -23,7 +23,9 @@ def build_parser(defaults: Config) -> argparse.ArgumentParser:
         description="Inventory and transfer pictures, extract ZIPs, and clean filesystem metadata.",
     )
     for f, opt in Config.options():
-        if opt.flags:
+        if f.name == "remove_macosx":
+            add_macosx_options(parser)
+        elif opt.flags:
             add_generated_option(parser, f.name, f.type, opt, getattr(defaults, f.name))
     parser.add_argument(
         "--filter", dest="image_filter", type=parse_image_filter, default=defaults.image_filter,
@@ -90,6 +92,21 @@ def add_log_file_options(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_macosx_options(parser: argparse.ArgumentParser) -> None:
+    """Keep the original enable flag and provide an opt-out for default cleanup."""
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--remove-macosx", dest="remove_macosx", action="store_const", const=True,
+        default=NOT_GIVEN,
+        help="Remove '_MACOSX' and '__MACOSX' folders and all their contents recursively "
+             "(default: enabled for extraction/cleanup).",
+    )
+    group.add_argument(
+        "--leave-macosx", dest="remove_macosx", action="store_const", const=False,
+        default=NOT_GIVEN, help="Keep '_MACOSX' and '__MACOSX' folders and their contents.",
+    )
+
+
 def parse_config(argv: list[str] | None = None, environ: Mapping[str, str] | None = None) -> Config:
     """Precedence: CLI flag > ARCHIVIST_* variable > built-in default."""
     try:
@@ -97,7 +114,11 @@ def parse_config(argv: list[str] | None = None, environ: Mapping[str, str] | Non
     except ValueError as ex:
         raise SystemExit(f"Invalid environment configuration: {ex}") from None
     ns = build_parser(defaults).parse_args(argv)
-    for name in ("apply", "log_file"):
+    env = os.environ if environ is None else environ
+    explicit_macosx = ns.remove_macosx is not NOT_GIVEN or bool(
+        env.get(ENV_PREFIX + "REMOVE_MACOSX", "").strip()
+    )
+    for name in ("apply", "log_file", "remove_macosx"):
         if getattr(ns, name) is NOT_GIVEN:
             setattr(ns, name, getattr(defaults, name))
     if ns.legacy_dry_run:
@@ -105,6 +126,8 @@ def parse_config(argv: list[str] | None = None, environ: Mapping[str, str] | Non
         ns.apply = False
     config = Config(**{f.name: getattr(ns, f.name) for f in fields(Config)})
     try:
+        if config.image_workflow and config.remove_macosx and explicit_macosx:
+            raise ValueError("--remove-macosx cannot be combined with image actions")
         config.validate_actions()
     except ValueError as ex:
         raise SystemExit(f"Invalid action configuration: {ex}") from None

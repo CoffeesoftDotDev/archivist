@@ -114,7 +114,7 @@ Fields are declared in `--help` order, and an empty or unset variable always kee
 Two rules keep options consistent:
 
 * Name each field after its flag and variable, and give it the flag's default. A `--leave-x` flag sets `leave_x`, which defaults to `False`; code that needs the positive meaning uses `not config.leave_x`.
-* An option that doesn't fit one of the types above is declared without flags and gets hand-written ones in `build_parser`, plus a `parse=` converter if its variable needs one. There are three today: `--apply` with the hidden `--dry-run`, the log file (`--log-file [PATH]` / `--no-log-file`) with `parse_log_file()`, and `--filter` with `parse_image_filter()`.
+* An option that doesn't fit one of the types above is declared without flags and gets hand-written ones in `build_parser`, plus a `parse=` converter if its variable needs one. There are four today: `--apply` with the hidden `--dry-run`, default-enabled MACOSX cleanup (`--remove-macosx` / `--leave-macosx`), the log file (`--log-file [PATH]` / `--no-log-file`) with `parse_log_file()`, and `--filter` with `parse_image_filter()`.
 
 ## Adding a step
 
@@ -137,5 +137,30 @@ EXIF/date cases to `test_image_workflow.py`. Native Windows and Linux checks req
 their respective hosts; simulated API checks are not native-platform evidence.
 
 ## Releases
+
+### Read-only MCP development and acceptance
+
+Use `uv run --extra mcp archivist-mcp --help` for the separate adapter, and
+preserve the base CLI's independence from MCP imports and dependencies.
+The [MCP guide](docs/mcp.md) owns consumer configuration, the machine-readable
+schema-export contract and the v0.3 acceptance checklist. Do not duplicate JSON
+Schemas in `examples\copilot`; runtime `tools/list` and the implementation
+exporter are authoritative.
+
+Run `node --test examples\copilot\launch-mcp.test.mjs` for the local launcher.
+Use session-only `copilot --plugin-dir .\examples\copilot` only when intentionally
+testing the client; do not install a plugin or change user configuration for
+automated validation. Obtain consent before sending local path metadata to a
+model. Fixture inventory/preview must create no collection, destination, report
+or staging files, apart from documented OS read-access bookkeeping.
+
+Record hosted Windows/Linux stdio and clean-environment pinned `uvx` smoke
+results separately from local checks. For a real public pin, use the reviewed
+full SHA of a commit that actually contains the server and tests, and repeat the
+smoke against that immutable source. Do not substitute an older `main` SHA,
+mutable branch or unverified PyPI distribution. A human maintainer owns release
+approval; documentation and acceptance work do not authorize publication.
+
+### Versioning
 
 Versions are tagged `vX.Y` on `main`, and planned work is grouped in [milestones](https://github.com/CoffeesoftDotDev/archivist/milestones). Update `version` in [pyproject.toml](pyproject.toml) and `__version__` in [\_\_init\_\_.py](src/archivist/__init__.py) together.

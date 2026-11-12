@@ -21,7 +21,7 @@ def test_defaults_clean_everything_and_delete_permanently():
     assert (config.leave_zip, config.leave_appledouble, config.leave_eadir) == (False, False, False)
     assert (config.leave_ds_store, config.leave_thumbs_db, config.leave_desktop_ini) == (False, False, False)
     assert (config.force_readonly, config.send_to_bin, config.apply) == (False, False, False)
-    assert config.remove_macosx is False
+    assert config.remove_macosx is True
     assert config.appledouble_max_size == APPLEDOUBLE_MAX_SIZE
     assert config.parent_folder is None and config.log_file == ""
 
@@ -131,10 +131,10 @@ def test_summary_keeps_appledouble_rules_separate_from_action_status():
     assert summary_value(config, "Remove AppleDouble") == "ENABLED (dry-run : read-only)"
 
 
-def test_summary_shows_opt_in_macosx_cleanup():
+def test_summary_shows_default_macosx_cleanup_and_opt_out():
     assert "|- Remove _MACOSX / __MACOSX" in Config().summary()
-    assert summary_value(Config(), "Remove _MACOSX / __MACOSX") == "DISABLED"
-    assert summary_value(Config(remove_macosx=True), "Remove _MACOSX / __MACOSX") == "ENABLED (dry-run : read-only)"
+    assert summary_value(Config(), "Remove _MACOSX / __MACOSX") == "ENABLED (dry-run : read-only)"
+    assert summary_value(Config(remove_macosx=False), "Remove _MACOSX / __MACOSX") == "DISABLED"
 
 
 def test_summary_uses_consistent_disabled_label_for_file_logging():

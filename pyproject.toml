@@ -8,6 +8,11 @@ dependencies = [
     "send2trash>=1.8",
 ]
 
+[project.optional-dependencies]
+mcp = [
+    "mcp>=1.28,<2",
+]
+
 [project.urls]
 Homepage = "https://github.com/CoffeesoftDotDev/archivist"
 Documentation = "https://coffeesoftdotdev.github.io/archivist/"
@@ -16,6 +21,7 @@ Issues = "https://github.com/CoffeesoftDotDev/archivist/issues"
 
 [project.scripts]
 archivist = "archivist.cli:main"
+archivist-mcp = "archivist.mcp:main"
 
 [dependency-groups]
 dev = [

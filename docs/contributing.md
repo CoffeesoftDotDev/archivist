@@ -54,6 +54,17 @@ Docker image and verifies preview and apply runs as the non-root user.
 uv run --locked pytest
 ```
 
+## MCP and local integration
+
+The [MCP guide](mcp.md) records the v0.3 consumer contract, startup configuration,
+immutable source-pinning procedure and acceptance checklist. Keep tool schemas
+generated from the implementation, not copied into examples. The
+`examples\copilot` directory contains the session-only plugin/agent/skill and
+launcher tests; do not install it in user configuration as part of validation.
+
+Hosted Windows/Linux MCP startup evidence and a human release decision remain
+separate gates. The existing CLI must still work without the optional MCP SDK.
+
 ## Contributor reference
 
 The repository guide covers adding options and workflow steps, debugging in VS Code, dependency

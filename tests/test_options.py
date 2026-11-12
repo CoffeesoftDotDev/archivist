@@ -14,9 +14,9 @@ HELP = """\
 usage: archivist [-h] [--parent-folder PARENT_FOLDER] [--list-images] [--move-images]
                  [--extract-zip] [--destination DESTINATION] [--copy] [--leave-zip]
                  [--leave-appledouble] [--leave-eadir] [--leave-ds-store] [--leave-thumbs-db]
-                 [--leave-desktop-ini] [--remove-macosx] [--max-size APPLEDOUBLE_MAX_SIZE]
-                 [--force-readonly-deletion] [--send-to-bin] [--filter EXTENSIONS] [--apply]
-                 [--log-file [PATH] | --no-log-file]
+                 [--leave-desktop-ini] [--remove-macosx | --leave-macosx]
+                 [--max-size APPLEDOUBLE_MAX_SIZE] [--force-readonly-deletion] [--send-to-bin]
+                 [--filter EXTENSIONS] [--apply] [--log-file [PATH] | --no-log-file]
 
 Inventory and transfer pictures, extract ZIPs, and clean filesystem metadata.
 
@@ -28,7 +28,8 @@ options:
                         List pictures on disk and inside ZIPs; write pictures.log.
   --move-images, --move-pictures
                         Inventory, ask for approval, extract ZIPs, then move pictures.
-  --extract-zip         Select ZIP extraction explicitly, without implicit metadata cleanup.
+  --extract-zip         Extract ZIPs without standard cleanup; use --leave-macosx to keep MACOSX
+                        folders.
   --destination DESTINATION
                         Flat picture destination; relative paths use the current directory.
   --copy                With --move-images, copy instead; preserve source pictures and ZIPs.
@@ -40,8 +41,9 @@ options:
   --leave-thumbs-db     Do not remove Windows 'Thumbs.db' thumbnail caches.
   --leave-desktop-ini   Do not remove Windows 'desktop.ini' files (they hold custom folder icons
                         and names).
-  --remove-macosx       Also remove '_MACOSX' and '__MACOSX' folders and all their contents
-                        recursively.
+  --remove-macosx       Remove '_MACOSX' and '__MACOSX' folders and all their contents recursively
+                        (default: enabled for extraction/cleanup).
+  --leave-macosx        Keep '_MACOSX' and '__MACOSX' folders and their contents.
   --max-size APPLEDOUBLE_MAX_SIZE
                         Max size in bytes for '._' files to be removed (default: 2048).
   --force-readonly-deletion, --force
@@ -88,7 +90,7 @@ def test_each_generated_option_is_set_by_every_flag_and_by_its_variable(name, ki
 
 def test_hand_written_options_have_no_generated_flag():
     hand_written = [f.name for f, opt in Config.options() if not opt.flags]
-    assert hand_written == ["image_filter", "apply", "log_file"]
+    assert hand_written == ["image_filter", "remove_macosx", "apply", "log_file"]
 
 
 def test_a_type_without_a_flag_shape_is_refused():
