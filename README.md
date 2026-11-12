@@ -21,6 +21,10 @@ Archivist extracts every `.zip` under a parent folder, including ZIPs found insi
 
 Explicit image actions also inventory pictures on disk and inside ZIPs, then optionally collect them into one folder by moving or copying after human approval.
 
+See [Choose a workflow](https://coffeesoftdotdev.github.io/archivist/workflows.html)
+for diagrams of both workflows, their options, and which metadata is removed
+versus preserved.
+
 > [!IMPORTANT]
 > Archivist only shows what it would do until you pass `--apply`. With `--apply`, it deletes each ZIP after extracting it and deletes metadata files permanently. Send removed items to the Recycle Bin with `--send-to-bin`, or keep the archives with `--leave-zip`.
 
@@ -46,6 +50,12 @@ Archivist then removes, in this order:
 * `@eaDir` folders (Synology)
 
 A file counts as hidden when its name starts with a dot or, on Windows, when it has the hidden or system attribute. Each cleanup step can be turned off with its `--leave-*` option.
+
+Pass `--remove-macosx` to additionally remove `_MACOSX` and `__MACOSX` folders
+and all their contents recursively below the parent folder, after extraction and
+the other cleanup steps. This is off by default, skips links/junctions, and honors
+dry runs, `--send-to-bin` and read-only protection (`--force` to override).
+It also works with `--extract-zip`, but cannot be combined with image actions.
 
 ### Existing folders
 
@@ -173,6 +183,7 @@ If you leave out `--parent-folder`, Archivist asks for the folder in the termina
 | `--leave-ds-store`                     | off                          | Keep `.DS_Store` files                                                                       |
 | `--leave-thumbs-db`                    | off                          | Keep Windows `Thumbs.db` thumbnail caches                                                    |
 | `--leave-desktop-ini`                  | off                          | Keep Windows `desktop.ini` files, which hold custom folder icons and names                   |
+| `--remove-macosx` | off | Recursively remove `_MACOSX` and `__MACOSX` folders, including all contents |
 | `--max-size <bytes>`                   | `2048`                       | Largest `._*` file to remove                                                                 |
 | `--force-readonly-deletion`, `--force` | off                          | Clear the read-only flag and delete read-only items, which are skipped otherwise             |
 | `--send-to-bin`                        | off                          | Send removed items to the Recycle Bin or Trash instead of deleting them permanently          |
@@ -246,6 +257,9 @@ archivist --parent-folder "C:\photos" --apply --leave-appledouble --leave-eadir 
 # Remove ._ files up to 4 KB, including read-only ones
 archivist --parent-folder "C:\photos" --apply --max-size 4096 --force
 
+# Also remove macOS archive metadata folders and all their contents
+archivist --parent-folder "C:\photos" --apply --remove-macosx
+
 # Write the report elsewhere, or not at all
 archivist --parent-folder "C:\photos" --log-file "D:\logs\photos-2026.log"
 archivist --parent-folder "C:\photos" --no-log-file
@@ -270,6 +284,7 @@ Every option can also be set with an `ARCHIVIST_*` environment variable. A comma
 | `ARCHIVIST_LEAVE_DS_STORE`          | `--leave-ds-store`             | `false`                                                                        |
 | `ARCHIVIST_LEAVE_THUMBS_DB`         | `--leave-thumbs-db`            | `false`                                                                        |
 | `ARCHIVIST_LEAVE_DESKTOP_INI`       | `--leave-desktop-ini`          | `false`                                                                        |
+| `ARCHIVIST_REMOVE_MACOSX` | `--remove-macosx` | `false` |
 | `ARCHIVIST_MAX_SIZE`                | `--max-size`                   | `2048`                                                                         |
 | `ARCHIVIST_FORCE_READONLY_DELETION` | `--force`                      | `false`                                                                        |
 | `ARCHIVIST_SEND_TO_BIN`             | `--send-to-bin`                | `false`                                                                        |

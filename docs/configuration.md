@@ -25,6 +25,7 @@ Unset and empty environment variables preserve the default.
 | `--leave-ds-store` | Off | Keep `.DS_Store` files |
 | `--leave-thumbs-db` | Off | Keep Windows `Thumbs.db` files |
 | `--leave-desktop-ini` | Off | Keep Windows `desktop.ini` files |
+| `--remove-macosx` | Off | Recursively remove `_MACOSX` and `__MACOSX` folders and all contents; not available with image actions |
 | `--max-size <bytes>` | `2048` | Largest AppleDouble file to remove |
 | `--force-readonly-deletion`, `--force` | Off | Clear read-only flags before removal |
 | `--send-to-bin` | Off | Use the Recycle Bin or Trash |
@@ -50,6 +51,7 @@ Unset and empty environment variables preserve the default.
 | `ARCHIVIST_LEAVE_DS_STORE` | `--leave-ds-store` | `false` |
 | `ARCHIVIST_LEAVE_THUMBS_DB` | `--leave-thumbs-db` | `false` |
 | `ARCHIVIST_LEAVE_DESKTOP_INI` | `--leave-desktop-ini` | `false` |
+| `ARCHIVIST_REMOVE_MACOSX` | `--remove-macosx` | `false` |
 | `ARCHIVIST_MAX_SIZE` | `--max-size` | `2048` |
 | `ARCHIVIST_FORCE_READONLY_DELETION` | `--force` | `false` |
 | `ARCHIVIST_SEND_TO_BIN` | `--send-to-bin` | `false` |

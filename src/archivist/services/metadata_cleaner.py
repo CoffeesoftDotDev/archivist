@@ -1,8 +1,9 @@
-"""Cleanup service for AppleDouble (._*, .DS_Store), Windows and Synology metadata."""
+"""Cleanup service for AppleDouble, macOS, Windows and Synology metadata."""
+import os
 from pathlib import Path
 
 from ..core import get_logger
-from ..utils import Remover, find_files, is_hidden
+from ..utils import Remover, find_files, is_hidden, is_link
 
 log = get_logger("cleaner")
 
@@ -55,6 +56,31 @@ class MetadataCleaner:
             except Exception as ex:
                 log.error(f"[ERROR] Failed to remove {folder}: {ex}")
         return len(removed)
+
+    def remove_macosx_folders(self, root: Path) -> int:
+        """Remove '_MACOSX' and '__MACOSX' trees below root, without following links."""
+        removed = 0
+
+        def log_walk_error(error: OSError) -> None:
+            log.error(f"[CLEANUP] Cannot scan {error.filename}: {error}")
+
+        for dirpath, dirnames, _ in os.walk(root, followlinks=False, onerror=log_walk_error):
+            for name in dirnames[:]:
+                folder = Path(dirpath) / name
+                if is_link(folder):
+                    dirnames.remove(name)
+                    continue
+                if name not in ("_MACOSX", "__MACOSX"):
+                    continue
+                # Do not descend into a selected tree, even in a dry run or after a failure.
+                dirnames.remove(name)
+                try:
+                    self.remover.remove_tree(folder)
+                    log.info(f"[CLEANUP] {self.remover.verb} folder: {folder}")
+                    removed += 1
+                except OSError as ex:
+                    log.error(f"[CLEANUP] Failed: {folder} ({ex})")
+        return removed
 
     def _remove_files(self, root: Path, pattern: str, max_size: int | None = None) -> int:
         removed = 0

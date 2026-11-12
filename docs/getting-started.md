@@ -51,5 +51,6 @@ environments, including Docker, require the folder to be configured.
 
 ## Next steps
 
+* [Choose a workflow](workflows.md) with visual guides to extraction, cleanup, picture inventory, move and copy
 * Read [Usage](usage.md) to understand extraction, existing folders, and reports
 * Review [Configuration](configuration.md) for every option and environment variable

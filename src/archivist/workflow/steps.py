@@ -75,3 +75,15 @@ class RemoveEaDirFolders(Step):
         removed = self.cleaner.remove_eadir_folders(root)
         log.info(f"[OK] {self.cleaner.remover.verb}: {removed} @eaDir folder(s)")
         return {"@eaDir folders removed": removed}
+
+
+class RemoveMacosxFolders(Step):
+    """Removes explicitly selected macOS archive metadata trees."""
+
+    title = "Removing _MACOSX and __MACOSX folders..."
+
+    def __init__(self, cleaner: MetadataCleaner):
+        self.cleaner = cleaner
+
+    def run(self, root: Path) -> dict[str, int]:
+        return {"_MACOSX / __MACOSX folders removed": self.cleaner.remove_macosx_folders(root)}

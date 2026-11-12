@@ -31,6 +31,14 @@ Install with uv, preview your first folder, and safely apply the changes.
 Learn how recursive extraction, existing folders, dry runs, and reports work.
 :::
 
+:::{grid-item-card} Choose a workflow
+:link: workflows
+:link-type: doc
+
+Compare extraction and cleanup with picture inventory, move and copy in visual
+guides, with the options for each stage.
+:::
+
 :::{grid-item-card} ⚙️ Configuration
 :link: configuration
 :link-type: doc
@@ -117,6 +125,7 @@ and the independent conversational/AG-UI direction.
 :hidden:
 
 getting-started
+workflows
 usage
 configuration
 image-api

@@ -3,6 +3,10 @@ title: Usage
 description: Inventory, move or copy images with approval, or run legacy extraction and cleanup
 ---
 
+Start with [Choose a workflow](workflows.md) for diagrams comparing extraction
+and cleanup with picture inventory, move and copy, including the options for
+each stage and the difference between cleanup artifacts and picture metadata.
+
 ## Image inventory
 
 ```powershell
@@ -184,6 +188,24 @@ After extraction, Archivist removes these items in order:
 * Synology `@eaDir` folders
 
 Use the matching `--leave-*` option to preserve any category.
+
+To additionally remove `_MACOSX` and the standard `__MACOSX` archive metadata
+folders, pass `--remove-macosx`. It recursively removes matching folders below
+the parent folder and **all their contents**, including visible files and nested
+directories. Nested matching folders count once as part of the outer tree.
+Other names and files named `_MACOSX` or `__MACOSX` are kept. Links and junctions
+are not followed. This optional step runs last, also with `--extract-zip`, so it
+includes folders created by extraction. It cannot be combined with image actions.
+
+```powershell
+# Preview first; add --apply to remove the folders
+archivist --parent-folder "C:\photos" --remove-macosx
+archivist --parent-folder "C:\photos" --remove-macosx --apply
+```
+
+`ARCHIVIST_REMOVE_MACOSX=true` enables the same option. `--send-to-bin` sends
+each selected tree to the Recycle Bin or Trash instead of deleting it permanently.
+Trees containing read-only items are kept unless `--force` is passed.
 
 ## Existing folders
 

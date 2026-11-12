@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="940" viewBox="0 0 960 940" role="img" aria-labelledby="title description">
+  <title id="title">Extraction and filesystem cleanup</title>
+  <desc id="description">Choose a parent folder. Preview by default, or apply changes. Extract ZIPs and handle archive retention. Without extract-zip, run standard metadata cleanup; with extract-zip, skip it. Both branches can optionally remove MACOSX trees. Report to the console and report.log. Removal policy supports Trash and read-only protection.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse"><path d="M1 1 L8 5 L1 9" fill="none" stroke="#64748b" stroke-width="1.5"/></marker>
+    <style>
+      text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; fill: #172b4d; }
+      .heading { font-size: 30px; font-weight: 750; }
+      .label { font-size: 21px; font-weight: 700; }
+      .body { font-size: 19px; }
+      .code { font-family: Consolas, monospace; font-size: 19px; }
+      .muted { fill: #475569; }
+      .line { fill: none; stroke: #64748b; stroke-width: 2; marker-end: url(#arrow); }
+      .card { fill: #fff; stroke: #cbd5e1; stroke-width: 1.5; }
+    </style>
+  </defs>
+  <rect width="960" height="940" rx="24" fill="#f8fafc"/>
+  <rect x="28" y="28" width="8" height="63" rx="4" fill="#a95508"/>
+  <text x="54" y="56" class="heading">01 / Extract archives and clean folders</text>
+  <text x="54" y="84" class="body muted">Unpack in place. Cleanup is separate from picture collection.</text>
+
+  <rect x="230" y="116" width="500" height="72" rx="14" class="card"/>
+  <text x="480" y="146" text-anchor="middle" class="label">Choose a folder tree</text>
+  <text x="480" y="173" text-anchor="middle" class="code">--parent-folder &lt;path&gt;</text>
+  <path d="M480 188 V216" class="line"/>
+
+  <rect x="64" y="220" width="832" height="88" rx="14" fill="#fff7ed" stroke="#c27b32" stroke-width="1.5"/>
+  <text x="88" y="252" class="label">PREVIEW by default</text>
+  <text x="88" y="281" class="body">Report planned work; no extraction or deletion.</text>
+  <text x="650" y="252" class="label">APPLY changes</text>
+  <text x="650" y="281" class="code">--apply</text>
+  <path d="M480 308 V336" class="line"/>
+
+  <rect x="190" y="340" width="580" height="100" rx="14" class="card"/>
+  <text x="480" y="373" text-anchor="middle" class="label">Extract ZIPs, including nested ZIPs</text>
+  <text x="480" y="401" text-anchor="middle" class="body">Stage safely, restore ZIP modification dates</text>
+  <text x="480" y="426" text-anchor="middle" class="code">Keep originals: --leave-zip</text>
+  <path d="M480 440 V468 H254 V495" class="line"/>
+  <path d="M480 468 H706 V495" class="line"/>
+
+  <rect x="44" y="500" width="420" height="146" rx="14" class="card"/>
+  <rect x="44" y="500" width="420" height="7" rx="3" fill="#a95508"/>
+  <text x="68" y="537" class="label">DEFAULT: standard cleanup</text>
+  <text x="68" y="567" class="body">._ files, .DS_Store, Thumbs.db,</text>
+  <text x="68" y="593" class="body">desktop.ini, eligible ._ folders, @eaDir</text>
+  <text x="68" y="625" class="code">Controls: --leave-* / --max-size</text>
+
+  <rect x="496" y="500" width="420" height="146" rx="14" class="card"/>
+  <text x="520" y="537" class="label">EXPLICIT: extraction only</text>
+  <text x="520" y="575" class="code">--extract-zip</text>
+  <text x="520" y="610" class="body">Skip the standard cleanup categories.</text>
+
+  <path d="M254 646 V674 H480 V699" class="line"/>
+  <path d="M706 646 V674 H480" fill="none" stroke="#64748b" stroke-width="2"/>
+  <rect x="150" y="704" width="660" height="88" rx="14" fill="#fff7ed" stroke="#c27b32" stroke-width="1.5"/>
+  <text x="480" y="737" text-anchor="middle" class="label">OPTIONAL: --remove-macosx</text>
+  <text x="480" y="767" text-anchor="middle" class="body">Remove _MACOSX / __MACOSX trees and ALL contents</text>
+  <path d="M480 792 V819" class="line"/>
+  <rect x="230" y="824" width="500" height="58" rx="14" class="card"/>
+  <text x="480" y="860" text-anchor="middle" class="label">Console + report.log</text>
+
+  <text x="480" y="918" text-anchor="middle" class="code muted">Removal policy: --send-to-bin / --force</text>
+</svg>

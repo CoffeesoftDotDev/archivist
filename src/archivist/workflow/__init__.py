@@ -7,6 +7,7 @@ from .steps import (
     RemoveAppleDoubleFolders,
     RemoveEaDirFolders,
     RemoveFilesNamed,
+    RemoveMacosxFolders,
     Step,
 )
 
@@ -16,6 +17,7 @@ __all__ = [
     "RemoveAppleDoubleFolders",
     "RemoveEaDirFolders",
     "RemoveFilesNamed",
+    "RemoveMacosxFolders",
     "Report",
     "Step",
     "Workflow",

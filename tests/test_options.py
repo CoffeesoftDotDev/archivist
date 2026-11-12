@@ -14,7 +14,7 @@ HELP = """\
 usage: archivist [-h] [--parent-folder PARENT_FOLDER] [--list-images] [--move-images]
                  [--extract-zip] [--destination DESTINATION] [--copy] [--leave-zip]
                  [--leave-appledouble] [--leave-eadir] [--leave-ds-store] [--leave-thumbs-db]
-                 [--leave-desktop-ini] [--max-size APPLEDOUBLE_MAX_SIZE]
+                 [--leave-desktop-ini] [--remove-macosx] [--max-size APPLEDOUBLE_MAX_SIZE]
                  [--force-readonly-deletion] [--send-to-bin] [--filter EXTENSIONS] [--apply]
                  [--log-file [PATH] | --no-log-file]
 
@@ -40,6 +40,8 @@ options:
   --leave-thumbs-db     Do not remove Windows 'Thumbs.db' thumbnail caches.
   --leave-desktop-ini   Do not remove Windows 'desktop.ini' files (they hold custom folder icons
                         and names).
+  --remove-macosx       Also remove '_MACOSX' and '__MACOSX' folders and all their contents
+                        recursively.
   --max-size APPLEDOUBLE_MAX_SIZE
                         Max size in bytes for '._' files to be removed (default: 2048).
   --force-readonly-deletion, --force
