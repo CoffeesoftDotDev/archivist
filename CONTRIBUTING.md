@@ -138,4 +138,29 @@ their respective hosts; simulated API checks are not native-platform evidence.
 
 ## Releases
 
+### Read-only MCP development and acceptance
+
+Use `uv run --extra mcp archivist-mcp --help` for the separate adapter, and
+preserve the base CLI's independence from MCP imports and dependencies.
+The [MCP guide](docs/mcp.md) owns consumer configuration, the machine-readable
+schema-export contract and the v0.3 acceptance checklist. Do not duplicate JSON
+Schemas in `examples\copilot`; runtime `tools/list` and the implementation
+exporter are authoritative.
+
+Run `node --test examples\copilot\launch-mcp.test.mjs` for the local launcher.
+Use session-only `copilot --plugin-dir .\examples\copilot` only when intentionally
+testing the client; do not install a plugin or change user configuration for
+automated validation. Obtain consent before sending local path metadata to a
+model. Fixture inventory/preview must create no collection, destination, report
+or staging files, apart from documented OS read-access bookkeeping.
+
+Record hosted Windows/Linux stdio and clean-environment pinned `uvx` smoke
+results separately from local checks. For a real public pin, use the reviewed
+full SHA of a commit that actually contains the server and tests, and repeat the
+smoke against that immutable source. Do not substitute an older `main` SHA,
+mutable branch or unverified PyPI distribution. A human maintainer owns release
+approval; documentation and acceptance work do not authorize publication.
+
+### Versioning
+
 Versions are tagged `vX.Y` on `main`, and planned work is grouped in [milestones](https://github.com/CoffeesoftDotDev/archivist/milestones). Update `version` in [pyproject.toml](pyproject.toml) and `__version__` in [\_\_init\_\_.py](src/archivist/__init__.py) together.

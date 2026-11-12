@@ -9,8 +9,11 @@ description: Install Archivist and safely process your first folder
 * [uv](https://docs.astral.sh/uv/), which provides `uvx`
 * Windows or Linux
 
-Send2Trash is the only runtime dependency. It is installed automatically and powers the optional
-Recycle Bin and Trash behavior.
+Send2Trash is the only base CLI runtime dependency. It is installed automatically
+and powers the optional Recycle Bin and Trash behavior. The separate
+[read-only MCP adapter](mcp.md) uses an optional `[mcp]` extra; it is not needed
+for any CLI command below. MCP public launches require a reviewed immutable
+commit containing the server, not the unpinned CLI examples on this page.
 
 ## Run without installing
 

@@ -7,6 +7,11 @@ Start with [Choose a workflow](workflows.md) for diagrams comparing extraction
 and cleanup with picture inventory, move and copy, including the options for
 each stage and the difference between cleanup artifacts and picture metadata.
 
+For a local model/client integration, see [read-only MCP](mcp.md). Its
+`inventory` and `prepare_transfer` tools return bounded structured pages without
+writing reports or applying a plan. The CLI examples below retain their existing
+dry-run, report and human-approval behavior.
+
 ## Image inventory
 
 ```powershell

@@ -25,6 +25,16 @@ See [Choose a workflow](https://coffeesoftdotdev.github.io/archivist/workflows.h
 for diagrams of both workflows, their options, and which metadata is removed
 versus preserved.
 
+For local Copilot/client integration, see the
+[read-only MCP guide](https://coffeesoftdotdev.github.io/archivist/mcp.html) and
+[self-contained local example](examples/copilot/README.md).
+The v0.3 candidate exposes only bounded `inventory` and `prepare_transfer`
+previews over stdio with explicit root allowlists. It has no apply/execution
+tool. `archivist-mcp` uses the optional `archivist[mcp]` extra; the existing CLI
+remains MCP-free. Public `uvx` startup must select this GitHub repository at a
+reviewed full immutable server commit, never bare `uvx archivist` or mutable
+`main`. Hosted acceptance and a human v0.3 release decision remain pending.
+
 > [!IMPORTANT]
 > Archivist only shows what it would do until you pass `--apply`. With `--apply`, it deletes each ZIP after extracting it and deletes metadata files permanently. Send removed items to the Recycle Bin with `--send-to-bin`, or keep the archives with `--leave-zip`.
 

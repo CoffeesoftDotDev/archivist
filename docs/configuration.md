@@ -8,6 +8,11 @@ description: Archivist command-line options and environment variables
 A command-line option overrides its environment variable, which overrides the built-in default.
 Unset and empty environment variables preserve the default.
 
+These are options for the existing `archivist` CLI. The separate
+[`archivist-mcp` adapter](mcp.md#operator-configuration) uses explicit startup
+root allowlists and bounded-read limits, not CLI apply or logging settings.
+MCP tools cannot change that policy or execute an operation.
+
 ## Command-line options
 
 | Option | Default | Purpose |

@@ -46,6 +46,13 @@ guides, with the options for each stage.
 Review every command-line option and its matching environment variable.
 :::
 
+:::{grid-item-card} Read-only MCP
+:link: mcp
+:link-type: doc
+
+Connect a local client for bounded picture inventory and transfer previews.
+:::
+
 :::{grid-item-card} 🐳 Docker
 :link: docker
 :link-type: doc
@@ -129,6 +136,7 @@ workflows
 usage
 configuration
 image-api
+mcp
 docker
 troubleshooting
 contributing
