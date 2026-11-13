@@ -20,7 +20,7 @@ def build_parser(defaults: Config) -> argparse.ArgumentParser:
     """Flags generated from the Config declarations, then the hand-written ones; `defaults` include the variables."""
     parser = argparse.ArgumentParser(
         prog="archivist",
-        description="Inventory and transfer pictures, extract ZIPs, and clean filesystem metadata.",
+        description="Export journal photos, inventory and transfer pictures, extract ZIPs, and clean filesystem metadata.",
     )
     for f, opt in Config.options():
         if f.name == "remove_macosx":
@@ -38,7 +38,7 @@ def build_parser(defaults: Config) -> argparse.ArgumentParser:
         action="store_const",
         const=True,
         default=NOT_GIVEN,
-        help="Make the changes: extract, move and delete. "
+        help="Make the changes: extract, move, delete, or export. "
              "Without it, Archivist only shows what it would do.",
     )
     # Kept so older scripts still work; a dry run is now the default.
@@ -128,6 +128,8 @@ def parse_config(argv: list[str] | None = None, environ: Mapping[str, str] | Non
     try:
         if config.image_workflow and config.remove_macosx and explicit_macosx:
             raise ValueError("--remove-macosx cannot be combined with image actions")
+        if config.export_journal and explicit_macosx:
+            raise ValueError("--remove-macosx / --leave-macosx cannot be combined with --export-journal")
         config.validate_actions()
     except ValueError as ex:
         raise SystemExit(f"Invalid action configuration: {ex}") from None

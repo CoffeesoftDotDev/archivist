@@ -20,6 +20,7 @@ description: Recursively extract ZIP archives and clean AppleDouble, Windows and
 Archivist extracts every `.zip` under a parent folder, including ZIPs found inside other ZIPs, then removes common AppleDouble, Windows and Synology metadata artifacts.
 
 Explicit image actions also inventory pictures on disk and inside ZIPs, then optionally collect them into one folder by moving or copying after human approval.
+The optional `--export-journal` action adds a preview-first TouteMonAnnee export.
 
 See [Choose a workflow](https://coffeesoftdotdev.github.io/archivist/workflows.html)
 for diagrams of both workflows, their options, and which metadata is removed
@@ -40,7 +41,7 @@ reviewed full immutable server commit, never bare `uvx archivist` or mutable
 
 ## What it does
 
-Without explicit action flags, Archivist keeps the extraction-and-cleanup workflow described below. Image actions use the separate ordered stages in [Image workflows](#image-workflows), with no implicit metadata cleanup.
+Without explicit action flags, Archivist keeps the extraction-and-cleanup workflow described below. Image actions use the separate ordered stages in [Image workflows](#image-workflows), with no implicit metadata cleanup. `--export-journal` selects the independent TouteMonAnnee workflow and cannot be combined with archive, image, or cleanup options.
 
 Archivist finds `.zip` files in any case (`photos.zip`, `PHOTOS.ZIP`) and processes each one in four steps:
 
@@ -152,13 +153,44 @@ for filesystem and archive limitations.
 See [Usage](docs/usage.md) for the report schema, supported formats, resource limits,
 and recovery constraints. Agent/AG-UI integration remains deferred.
 
+## TouteMonAnnee journal export
+
+This optional third workflow exports photos from a TouteMonAnnee journal. Install
+its browser and media dependencies in a local checkout with
+`uv sync --extra toutemonannee`, then install Playwright Chromium with
+`uv run playwright install chromium` (or use the installed Microsoft Edge channel).
+
+```powershell
+# Preview without opening a browser, signing in, creating a report, or changing files
+archivist --export-journal --journal-destination "C:\school-photos"
+
+# Start the authenticated export
+archivist --export-journal --journal-destination "C:\school-photos" --apply
+```
+
+Journal selection happens in the dedicated browser; `--parent-folder` is not used.
+The exporter reads its existing `appsettings.json` and `TMA_*` settings, or a
+specific file passed with `--journal-config`. `--journal-destination` overrides
+only that settings file's destination. Restricted-photo screenshots remain a
+separate explicit permission (`TMA_ScreenshotRestricted=true` in private settings
+or `--screenshot-restricted true` in the standalone `tma` command). Applying this
+workflow writes the export's `pictures.log`; Archivist's standard archive, image,
+and cleanup actions cannot be combined with it. The read-only MCP tools do not
+expose journal login or export operations.
+
+See [TouteMonAnnee settings and privacy](docs/toutemonannee.md) and the
+[example settings file](examples/toutemonannee/appsettings.example.json). Keep
+real settings and browser profiles private; `appsettings.json` is ignored by Git.
+
 ## Requirements
 
 * Python 3.10 or later
 * [uv](https://docs.astral.sh/uv/), which provides `uvx` (recommended)
 * Windows or Linux
 
-The only dependency, [Send2Trash](https://pypi.org/project/Send2Trash/), is installed automatically and powers `--send-to-bin`.
+[Send2Trash](https://pypi.org/project/Send2Trash/) powers `--send-to-bin`.
+The journal exporter is optional and adds `httpx`, Pillow and Playwright only
+when the `toutemonannee` extra is installed.
 
 ## Getting started
 
@@ -184,6 +216,9 @@ If you leave out `--parent-folder`, Archivist asks for the folder in the termina
 | Option                                 | Default                      | Description                                                                                  |
 |----------------------------------------|------------------------------|----------------------------------------------------------------------------------------------|
 | `--parent-folder <path>`               | prompt                       | Folder to process. An empty value counts as not given                                        |
+| `--export-journal` | off | Select the TouteMonAnnee export; preview only unless `--apply` is passed |
+| `--journal-destination <path>` | journal settings | Override the export destination; does not select a journal |
+| `--journal-config <path>` | `appsettings.json` | Load TouteMonAnnee JSON settings |
 | `--list-images`, `--list-pictures` | off | Inventory pictures on disk and in ZIPs |
 | `--move-images`, `--move-pictures` | off | Inventory, approve, extract, then transfer selected pictures |
 | `--extract-zip` | off | Skip standard cleanup; MACOSX cleanup remains enabled unless `--leave-macosx` |

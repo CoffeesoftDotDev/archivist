@@ -3,6 +3,7 @@ from ..core import Config
 from ..services import ConfirmImages, ConfirmMerge, ImageRun, MetadataCleaner, ZipExtractor
 from ..utils import make_remover
 from .runner import Workflow
+from .journal_export import JournalExportWorkflow
 from .image_steps import ConfirmImagePlan, ExtractImageArchives, ImageWorkflow, ListImages, TransferImages
 from .steps import (
     ExtractArchives,
@@ -26,9 +27,11 @@ class WorkflowBuilder:
         self.confirm_merge = confirm_merge  # asked per archive whose folder exists; None never merges
         self.confirm_images = confirm_images
 
-    def build(self) -> Workflow:
+    def build(self) -> Workflow | ImageWorkflow | JournalExportWorkflow:
         config = self.config
         config.validate_actions()
+        if config.export_journal:
+            return JournalExportWorkflow(config)
         if config.image_workflow:
             context = ImageRun(config, self.confirm_images)
             steps: list[Step] = [ListImages(context)]
