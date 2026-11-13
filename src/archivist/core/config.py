@@ -76,12 +76,24 @@ _PARSERS: dict[Any, Callable[[str], Any]] = {bool: _parse_bool, int: _parse_int,
 @dataclass(frozen=True)
 class Config:
     """
-    Runtime options for the extractor/cleaner. MACOSX cleanup is enabled by default.
+    Runtime options for Archivist's workflows. MACOSX cleanup is enabled by default.
     Fields are in --help order; see CONTRIBUTING.md, "Adding an option".
     """
     parent_folder: Path | None = option(
         None, "--parent-folder", env="PARENT_FOLDER",
         help="Parent folder to process. If omitted or empty, you will be prompted.",
+    )
+    export_journal: bool = option(
+        False, "--export-journal", env="EXPORT_JOURNAL",
+        help="Export a TouteMonAnnee journal; use --apply to open the browser and export photos.",
+    )
+    journal_destination: Path | None = option(
+        None, "--journal-destination", env="JOURNAL_DESTINATION",
+        help="Destination for a TouteMonAnnee export (overrides its configured destination).",
+    )
+    journal_config: Path | None = option(
+        None, "--journal-config", env="JOURNAL_CONFIG",
+        help="TouteMonAnnee JSON settings file (defaults to ./appsettings.json).",
     )
     list_images: bool = option(
         False, "--list-images", "--list-pictures", env="LIST_IMAGES",
@@ -168,6 +180,21 @@ class Config:
 
     def validate_actions(self) -> None:
         """Reject modifiers that do not have a corresponding action."""
+        if not self.export_journal and (self.journal_destination is not None or self.journal_config is not None):
+            raise ValueError("--journal-destination and --journal-config require --export-journal")
+        if self.export_journal:
+            if self.parent_folder is not None:
+                raise ValueError("--parent-folder cannot be combined with --export-journal; use --journal-destination")
+            if self.image_workflow or self.extract_zip:
+                raise ValueError("--export-journal cannot be combined with archive or image actions")
+            if (
+                self.destination is not None or self.copy or self.image_filter is not None
+                or self.leave_zip or self.leave_appledouble or self.leave_eadir or self.leave_ds_store
+                or self.leave_thumbs_db or self.leave_desktop_ini or not self.remove_macosx
+                or self.appledouble_max_size != APPLEDOUBLE_MAX_SIZE
+                or self.force_readonly or self.send_to_bin
+            ):
+                raise ValueError("--export-journal cannot be combined with archive, image, or cleanup modifiers")
         if self.copy and not self.move_images:
             raise ValueError("--copy requires --move-images / --move-pictures")
         if self.destination is not None and not self.move_images:
@@ -210,9 +237,19 @@ class Config:
         else:
             mode_label = "APPLY (write)" if self.apply else "DRY-RUN (read-only)"
         settings = [
-            ("Parent Folder", str(parent_folder or self.parent_folder or "(prompt)")),
+            ("Parent Folder", (
+                "(not used; select journal in browser)" if self.export_journal
+                else str(parent_folder or self.parent_folder or "(prompt)")
+            )),
             ("Mode", mode_label),
         ]
+        if self.export_journal:
+            settings += [
+                ("Workflow", "TouteMonAnnee journal export"),
+                ("Export Destination", str(self.journal_destination or "(from journal settings)")),
+                ("Journal Settings", str(self.journal_config or "appsettings.json / TMA_*")),
+            ]
+            return "\n".join(group("Current Config", settings))
         if self.image_workflow:
             action = "COPY" if self.copy else "MOVE" if self.move_images else "LIST"
             settings += [

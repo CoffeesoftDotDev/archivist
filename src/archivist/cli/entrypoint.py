@@ -49,6 +49,12 @@ def _run(argv: list[str] | None) -> int:
     # Console first (root unknown yet); the file handler is added once root is resolved.
     setup_logging(console=True)
 
+    if config.export_journal:
+        for line in config.summary().splitlines():
+            log.info(line)
+        workflow = WorkflowBuilder(config).build()
+        return workflow.run()
+
     root = resolve_root(config.parent_folder)
     if root is None:
         return 2

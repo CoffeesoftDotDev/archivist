@@ -11,19 +11,28 @@ from archivist.core.config import Option
 
 # The full --help text at a fixed width, including generated flags and aliases.
 HELP = """\
-usage: archivist [-h] [--parent-folder PARENT_FOLDER] [--list-images] [--move-images]
-                 [--extract-zip] [--destination DESTINATION] [--copy] [--leave-zip]
-                 [--leave-appledouble] [--leave-eadir] [--leave-ds-store] [--leave-thumbs-db]
-                 [--leave-desktop-ini] [--remove-macosx | --leave-macosx]
+usage: archivist [-h] [--parent-folder PARENT_FOLDER] [--export-journal]
+                 [--journal-destination JOURNAL_DESTINATION] [--journal-config JOURNAL_CONFIG]
+                 [--list-images] [--move-images] [--extract-zip] [--destination DESTINATION]
+                 [--copy] [--leave-zip] [--leave-appledouble] [--leave-eadir] [--leave-ds-store]
+                 [--leave-thumbs-db] [--leave-desktop-ini] [--remove-macosx | --leave-macosx]
                  [--max-size APPLEDOUBLE_MAX_SIZE] [--force-readonly-deletion] [--send-to-bin]
                  [--filter EXTENSIONS] [--apply] [--log-file [PATH] | --no-log-file]
 
-Inventory and transfer pictures, extract ZIPs, and clean filesystem metadata.
+Export journal photos, inventory and transfer pictures, extract ZIPs, and clean filesystem
+metadata.
 
 options:
   -h, --help            show this help message and exit
   --parent-folder PARENT_FOLDER
                         Parent folder to process. If omitted or empty, you will be prompted.
+  --export-journal      Export a TouteMonAnnee journal; use --apply to open the browser and export
+                        photos.
+  --journal-destination JOURNAL_DESTINATION
+                        Destination for a TouteMonAnnee export (overrides its configured
+                        destination).
+  --journal-config JOURNAL_CONFIG
+                        TouteMonAnnee JSON settings file (defaults to ./appsettings.json).
   --list-images, --list-pictures
                         List pictures on disk and inside ZIPs; write pictures.log.
   --move-images, --move-pictures
@@ -52,8 +61,8 @@ options:
   --send-to-bin         Send removed items to the Recycle Bin / Trash instead of deleting them
                         permanently.
   --filter EXTENSIONS   Comma-separated image extensions, e.g. JPG,Png,Jpeg,ARW.
-  --apply               Make the changes: extract, move and delete. Without it, Archivist only
-                        shows what it would do.
+  --apply               Make the changes: extract, move, delete, or export. Without it, Archivist
+                        only shows what it would do.
   --log-file [PATH]     Write the report to PATH (a file, or a folder that will contain
                         report.log, or pictures.log for image workflows). Default: <parent-
                         folder>/report.log (pictures.log for images). The console always shows the
@@ -81,7 +90,11 @@ def test_every_field_is_declared_with_a_unique_variable():
 @pytest.mark.parametrize(("name", "kind", "opt"), GENERATED, ids=[name for name, _, _ in GENERATED])
 def test_each_generated_option_is_set_by_every_flag_and_by_its_variable(name, kind, opt):
     args, raw, expected = SAMPLES[kind]
-    prerequisites = ["--move-images"] if name in ("destination", "copy") else []
+    prerequisites = (
+        ["--move-images"] if name in ("destination", "copy")
+        else ["--export-journal"] if name in ("journal_destination", "journal_config")
+        else []
+    )
     assert getattr(parse_config([], environ={}), name) == getattr(Config(), name)
     for flag in opt.flags:  # aliases too, such as --force
         assert getattr(parse_config([*prerequisites, flag, *args], environ={}), name) == expected

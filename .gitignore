@@ -6,6 +6,7 @@ build/
 _build/
 *.egg-info/
 .pytest_cache/
+appsettings.json
 
 # Local Copilot planning and tracking files
 .copilot-tracking/

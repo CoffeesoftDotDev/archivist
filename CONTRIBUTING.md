@@ -18,7 +18,7 @@ uv run python -m archivist --help
 uv run pytest
 ```
 
-`uv run` creates the `.venv` folder and installs the package with its `dev` dependency group (pytest) on first use.
+`uv run` creates the `.venv` folder and installs the package with its `dev` dependency group (pytest) on first use. To run the optional TouteMonAnnee workflow, use `uv sync --extra toutemonannee` and install a Playwright browser with `uv run playwright install chromium`.
 
 ## Tests
 
@@ -46,6 +46,7 @@ Leave the folder empty to get the prompt in the terminal instead.
 * A Docker build, followed by a dry run and then an `--apply` run on a sample ZIP as the non-root user
 
 `--locked` fails when [uv.lock](uv.lock) is out of date, so run `uv lock` after changing dependencies in [pyproject.toml](pyproject.toml).
+The optional journal exporter tests run when its extra is installed; use `uv run --extra toutemonannee pytest` locally to include them.
 
 ## Project structure
 
@@ -78,6 +79,8 @@ src/archivist/
     image_transfer.py      Approval-bound ImageRun, reports, full extraction, naming and safe transfer
     metadata_cleaner.py    MetadataCleaner (._ files and folders, .DS_Store, Thumbs.db, desktop.ini, @eaDir)
   utils/                   Filesystem helpers and removal strategies, no business rules
+src/toutemonannee/         Optional, isolated journal-export workflow
+tests/tma_vendor_tests/     Migrated exporter tests, isolated from Archivist fixtures
     fs.py                  Hidden and read-only checks, any-case file search, sizes
     timestamps.py          Exact original dates, Windows creation-time restoration and verification
     removers.py            Delete permanently, send to bin, or dry run (Strategy pattern)
